@@ -1032,54 +1032,15 @@ Status Storage::ZScan(const Slice& key, int64_t cursor, const std::string& patte
 
 int32_t Storage::Expire(const Slice& key, uint64_t ttl) {
   int32_t ret = 0;
-  bool is_corruption = false;
-
   auto& inst = GetDBInstance(key);
   // Strings
-  Status s = inst->StringsExpire(key, ttl);
+  Status s = inst->Expire(key, ttl);
   if (s.ok()) {
     ret++;
   } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  // Hash
-  s = inst->HashesExpire(key, ttl);
-  if (s.ok()) {
-    ret++;
-  } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  // Sets
-  s = inst->SetsExpire(key, ttl);
-  if (s.ok()) {
-    ret++;
-  } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  // Lists
-  s = inst->ListsExpire(key, ttl);
-  if (s.ok()) {
-    ret++;
-  } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  // Zsets
-  s = inst->ZsetsExpire(key, ttl);
-  if (s.ok()) {
-    ret++;
-  } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  if (is_corruption) {
     return -1;
-  } else {
-    return ret;
   }
+  return ret;
 }
 
 int64_t Storage::Del(const std::vector<std::string>& keys) {
@@ -1087,32 +1048,7 @@ int64_t Storage::Del(const std::vector<std::string>& keys) {
   int64_t count = 0;
   for (const auto& key : keys) {
     auto& inst = GetDBInstance(key);
-    // Strings
-    Status s = inst->StringsDel(key);
-    if (s.ok()) {
-      count++;
-    }
-
-    // Hashes
-    s = inst->HashesDel(key);
-    if (s.ok()) {
-      count++;
-    }
-
-    // Sets
-    s = inst->SetsDel(key);
-    if (s.ok()) {
-      count++;
-    }
-
-    // Lists
-    s = inst->ListsDel(key);
-    if (s.ok()) {
-      count++;
-    }
-
-    // ZSets
-    s = inst->ZsetsDel(key);
+    s = inst->Del(key);
     if (s.ok()) {
       count++;
     }
@@ -1193,55 +1129,19 @@ int64_t Storage::DelByType(const std::vector<std::string>& keys, const DataType&
 
 int64_t Storage::Exists(const std::vector<std::string>& keys) {
   int64_t count = 0;
-  int32_t ret;
-  uint64_t llen;
-  std::string value;
   Status s;
   bool is_corruption = false;
 
   for (const auto& key : keys) {
     auto& inst = GetDBInstance(key);
-    s = inst->Get(key, &value);
+    s = inst->Exists(key);
     if (s.ok()) {
       count++;
     } else if (!s.IsNotFound()) {
-      is_corruption = true;
-    }
-
-    s = inst->HLen(key, &ret);
-    if (s.ok()) {
-      count++;
-    } else if (!s.IsNotFound()) {
-      is_corruption = true;
-    }
-
-    s = inst->SCard(key, &ret);
-    if (s.ok()) {
-      count++;
-    } else if (!s.IsNotFound()) {
-      is_corruption = true;
-    }
-
-    s = inst->LLen(key, &llen);
-    if (s.ok()) {
-      count++;
-    } else if (!s.IsNotFound()) {
-      is_corruption = true;
-    }
-
-    s = inst->ZCard(key, &ret);
-    if (s.ok()) {
-      count++;
-    } else if (!s.IsNotFound()) {
-      is_corruption = true;
+      return -1;
     }
   }
-
-  if (is_corruption) {
-    return -1;
-  } else {
-    return count;
-  }
+  return count;
 }
 
 int64_t Storage::Scan(const DataType& dtype, int64_t cursor, const std::string& pattern, int64_t count,
@@ -1498,45 +1398,11 @@ Status Storage::Scanx(const DataType& data_type, const std::string& start_key, c
 int32_t Storage::Expireat(const Slice& key, uint64_t timestamp) {
   Status s;
   int32_t count = 0;
-  bool is_corruption = false;
-
   auto& inst = GetDBInstance(key);
   s = inst->StringsExpireat(key, timestamp);
   if (s.ok()) {
     count++;
   } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  s = inst->HashesExpireat(key, timestamp);
-  if (s.ok()) {
-    count++;
-  } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  s = inst->SetsExpireat(key, timestamp);
-  if (s.ok()) {
-    count++;
-  } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  s = inst->ListsExpireat(key, timestamp);
-  if (s.ok()) {
-    count++;
-  } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  s = inst->ZsetsExpireat(key, timestamp);
-  if (s.ok()) {
-    count++;
-  } else if (!s.IsNotFound()) {
-    is_corruption = true;
-  }
-
-  if (is_corruption) {
     return -1;
   }
   return count;

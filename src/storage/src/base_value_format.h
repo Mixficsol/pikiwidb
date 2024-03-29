@@ -61,6 +61,7 @@ class InternalValue {
   char space_[200];
   char* start_ = nullptr;
   Slice user_value_;
+  Slice type_;
   uint64_t version_ = 0;
   uint64_t etime_ = 0;
   uint64_t ctime_ = 0;

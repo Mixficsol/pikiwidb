@@ -28,7 +28,7 @@ const int kVersionLength = 8;
 const int kScoreLength = 8;
 const int kSuffixReserveLength = 16;
 const int kListValueIndexLength = 16;
-
+const int kTypeLength = 1;
 const int kTimestampLength = 8;
 
 enum ColumnFamilyIndex {

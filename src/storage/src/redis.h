@@ -179,7 +179,10 @@ class Redis {
   Status BitPos(const Slice& key, int32_t bit, int64_t start_offset, int64_t* ret);
   Status BitPos(const Slice& key, int32_t bit, int64_t start_offset, int64_t end_offset, int64_t* ret);
   Status PKSetexAt(const Slice& key, const Slice& value, uint64_t timestamp);
-
+  Status Exists(const Slice& key);
+  Status Del(const Slice& key);
+  Status Expire(const Slice& key, uint64_t timestamp);
+  Status Expireat(const Slice& key, uint64_t timestamp);
   // Hash Commands
   Status HDel(const Slice& key, const std::vector<std::string>& fields, int32_t* ret);
   Status HExists(const Slice& key, const Slice& field);

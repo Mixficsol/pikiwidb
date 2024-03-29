@@ -351,6 +351,12 @@ class Storage {
   // or key does not exist.
   Status HExists(const Slice& key, const Slice& field);
 
+  // Returns if field is an existing field at key.
+  // Return Status::Ok() if the contains field.
+  // Return Status::NotFound() if does not contain field,
+  // or key does not exist.
+  Status Exists(const Slice& key);
+
   // Increments the number stored at field in the hash stored at key by
   // increment. If key does not exist, a new key holding a hash is created. If
   // field does not exist the value is set to 0 before the operation is

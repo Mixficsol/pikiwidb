@@ -80,33 +80,25 @@ class ParsedListsMetaValue : public ParsedInternalValue {
     assert(internal_value_str->size() >= kListsMetaValueSuffixLength);
     if (internal_value_str->size() >= kListsMetaValueSuffixLength) {
       int offset = 0;
-      type_ = Slice(internal_value_str->data(), 1);
-      // std::cout << "type_: " << type_.ToStringView() << std::endl;
-      offset += 1;
-      user_value_ =
-          rocksdb::Slice(internal_value_str->data() + 1, internal_value_str->size() - kListsMetaValueSuffixLength - 1);
+      type_ = Slice(internal_value_str->data(), TYPE_SIZE);
+      offset += TYPE_SIZE;
+      user_value_ = rocksdb::Slice(internal_value_str->data() + TYPE_SIZE,
+                                   internal_value_str->size() - kListsMetaValueSuffixLength - TYPE_SIZE);
       offset += user_value_.size();
-      // std::cout << "user_value_: " << user_value_.ToStringView() << std::endl;
       version_ = DecodeFixed64(internal_value_str->data() + offset);
       offset += kVersionLength;
-      // std::cout << "version: " << version_ << std::endl;
       left_index_ = DecodeFixed64(internal_value_str->data() + offset);
-      // std::cout << "left_index_: " << left_index_ << std::endl;
       offset += kListValueIndexLength;
       right_index_ = DecodeFixed64(internal_value_str->data() + offset);
-      // std::cout << "right_index_: " << right_index_ << std::endl;
       offset += kListValueIndexLength;
       memcpy(reserve_, internal_value_str->data() + offset, sizeof(reserve_));
       offset += kSuffixReserveLength;
       ctime_ = DecodeFixed64(internal_value_str->data() + offset);
-      // std::cout << "ctime: " << ctime_ << std::endl;
       offset += kTimestampLength;
       etime_ = DecodeFixed64(internal_value_str->data() + offset);
-      // std::cout << "etime: " << etime_ << std::endl;
       offset += kTimestampLength;
     }
-    count_ = DecodeFixed64(internal_value_str->data() + 1);
-    // std::cout << "count: " << count_ << std::endl;
+    count_ = DecodeFixed64(internal_value_str->data() + TYPE_SIZE);
   }
 
   // Use this constructor in rocksdb::CompactionFilter::Filter();
@@ -115,10 +107,10 @@ class ParsedListsMetaValue : public ParsedInternalValue {
     assert(internal_value_slice.size() >= kListsMetaValueSuffixLength);
     if (internal_value_slice.size() >= kListsMetaValueSuffixLength) {
       int offset = 0;
-      type_ = Slice(internal_value_slice.data(), 1);
-      offset += 1;
-      user_value_ = rocksdb::Slice(internal_value_slice.data() + 1,
-                                   internal_value_slice.size() - kListsMetaValueSuffixLength - 1);
+      type_ = Slice(internal_value_slice.data(), TYPE_SIZE);
+      offset += TYPE_SIZE;
+      user_value_ = rocksdb::Slice(internal_value_slice.data() + TYPE_SIZE,
+                                   internal_value_slice.size() - kListsMetaValueSuffixLength - TYPE_SIZE);
       offset += user_value_.size();
       version_ = DecodeFixed64(internal_value_slice.data() + offset);
       offset += kVersionLength;
@@ -131,7 +123,6 @@ class ParsedListsMetaValue : public ParsedInternalValue {
       ctime_ = DecodeFixed64(internal_value_slice.data() + offset);
       offset += kTimestampLength;
       etime_ = DecodeFixed64(internal_value_slice.data() + offset);
-      offset += kTimestampLength;
     }
     count_ = DecodeFixed64(internal_value_slice.data() + 1);
   }
@@ -148,7 +139,7 @@ class ParsedListsMetaValue : public ParsedInternalValue {
       EncodeFixed64(dst, version_);
     }
   }
-  bool IsType(Slice c) { return type_.ToStringView() == c.ToStringView(); }
+  bool IsType(const Slice& str) { return type_ == str; }
 
   void SetCtimeToValue() override {
     if (value_) {
