@@ -298,7 +298,7 @@ Status Redis::ZAdd(const Slice& key, const std::vector<ScoreMember>& score_membe
   } else if (s.IsNotFound()) {
     char str[5];
     EncodeFixed8(str, 'z');
-    EncodeFixed32(str + 1, filtered_score_members.size());
+    EncodeFixed32(str + TYPE_SIZE, filtered_score_members.size());
     ZSetsMetaValue zsets_meta_value(Slice(str, 5));
     version = zsets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), zsets_meta_value.Encode());
@@ -454,9 +454,11 @@ Status Redis::ZIncrby(const Slice& key, const Slice& member, double increment, d
       return s;
     }
   } else if (s.IsNotFound()) {
-    char buf[8];
-    EncodeFixed32(buf, 1);
-    ZSetsMetaValue zsets_meta_value(Slice(buf, sizeof(int32_t)));
+    char str[5];
+    EncodeFixed8(str, 'z');
+    EncodeFixed32(str + TYPE_SIZE, 1);
+    ZSetsMetaValue zsets_meta_value(Slice(str, 5));
+
     version = zsets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), zsets_meta_value.Encode());
     score = increment;
@@ -1230,7 +1232,7 @@ Status Redis::ZUnionstore(const Slice& destination, const std::vector<std::strin
   } else {
     char str[5];
     EncodeFixed8(str, 'z');
-    EncodeFixed32(str + 1, member_score_map.size());
+    EncodeFixed32(str + TYPE_SIZE, member_score_map.size());
     ZSetsMetaValue zsets_meta_value(Slice(str, 5));
     version = zsets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_destination.Encode(), zsets_meta_value.Encode());
@@ -1373,9 +1375,10 @@ Status Redis::ZInterstore(const Slice& destination, const std::vector<std::strin
     parsed_zsets_meta_value.SetCount(static_cast<int32_t>(final_score_members.size()));
     batch.Put(handles_[kMetaCF], base_destination.Encode(), meta_value);
   } else {
-    char buf[4];
-    EncodeFixed32(buf, final_score_members.size());
-    ZSetsMetaValue zsets_meta_value(Slice(buf, sizeof(int32_t)));
+    char str[5];
+    EncodeFixed8(str, 'z');
+    EncodeFixed32(str + TYPE_SIZE, final_score_members.size());
+    ZSetsMetaValue zsets_meta_value(Slice(str, 5));
     version = zsets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_destination.Encode(), zsets_meta_value.Encode());
   }

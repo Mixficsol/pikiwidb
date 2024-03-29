@@ -360,7 +360,7 @@ Status Redis::LPush(const Slice& key, const std::vector<std::string>& values, ui
   } else if (s.IsNotFound()) {
     char str[9];
     EncodeFixed8(str, 'l');
-    EncodeFixed64(str + 1, values.size());
+    EncodeFixed64(str + TYPE_SIZE, values.size());
     ListsMetaValue lists_meta_value(Slice(str, 9));
     version = lists_meta_value.UpdateVersion();
     for (const auto& value : values) {
@@ -371,7 +371,6 @@ Status Redis::LPush(const Slice& key, const std::vector<std::string>& values, ui
       batch.Put(handles_[kListsDataCF], lists_data_key.Encode(), i_val.Encode());
     }
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), lists_meta_value.Encode());
-    // std::cout << "list_meta_value: " << lists_meta_value.Encode().ToStringView() << std::endl;
     *ret = lists_meta_value.RightIndex() - lists_meta_value.LeftIndex() - 1;
   } else {
     return s;
@@ -916,7 +915,7 @@ Status Redis::RPoplpush(const Slice& source, const Slice& destination, std::stri
   } else if (s.IsNotFound()) {
     char str[9];
     EncodeFixed8(str, 'l');
-    EncodeFixed64(str + 1, 1);
+    EncodeFixed64(str + TYPE_SIZE, 1);
     ListsMetaValue lists_meta_value(Slice(str, 9));
     version = lists_meta_value.UpdateVersion();
     uint64_t target_index = lists_meta_value.LeftIndex();
@@ -971,7 +970,7 @@ Status Redis::RPush(const Slice& key, const std::vector<std::string>& values, ui
   } else if (s.IsNotFound()) {
     char str[9];
     EncodeFixed8(str, 'l');
-    EncodeFixed64(str + 1, values.size());
+    EncodeFixed64(str + TYPE_SIZE, values.size());
     ListsMetaValue lists_meta_value(Slice(str, 9));
     version = lists_meta_value.UpdateVersion();
     for (const auto& value : values) {

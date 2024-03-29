@@ -178,7 +178,7 @@ rocksdb::Status Redis::SAdd(const Slice& key, const std::vector<std::string>& me
   } else if (s.IsNotFound()) {
     char str[5];
     EncodeFixed8(str, 's');
-    EncodeFixed32(str + 1, filtered_members.size());
+    EncodeFixed32(str + TYPE_SIZE, filtered_members.size());
     SetsMetaValue sets_meta_value(Slice(str, 5));
     version = sets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), sets_meta_value.Encode());
@@ -386,7 +386,7 @@ rocksdb::Status Redis::SDiffstore(const Slice& destination, const std::vector<st
   } else if (s.IsNotFound()) {
     char str[5];
     EncodeFixed8(str, 's');
-    EncodeFixed32(str + 1, members.size());
+    EncodeFixed32(str + TYPE_SIZE, members.size());
     SetsMetaValue sets_meta_value(Slice(str, 5));
     version = sets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_destination.Encode(), sets_meta_value.Encode());
@@ -597,7 +597,7 @@ rocksdb::Status Redis::SInterstore(const Slice& destination, const std::vector<s
   } else if (s.IsNotFound()) {
     char str[5];
     EncodeFixed8(str, 's');
-    EncodeFixed32(str + 1, members.size());
+    EncodeFixed32(str + TYPE_SIZE, members.size());
     SetsMetaValue sets_meta_value(Slice(str, 5));
     version = sets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_destination.Encode(), sets_meta_value.Encode());
@@ -820,7 +820,7 @@ rocksdb::Status Redis::SMove(const Slice& source, const Slice& destination, cons
   } else if (s.IsNotFound()) {
     char str[5];
     EncodeFixed8(str, 's');
-    EncodeFixed32(str + 1, 1);
+    EncodeFixed32(str + TYPE_SIZE, 1);
     SetsMetaValue sets_meta_value(Slice(str, 5));
     version = sets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_destination.Encode(), sets_meta_value.Encode());
@@ -1180,7 +1180,7 @@ rocksdb::Status Redis::SUnionstore(const Slice& destination, const std::vector<s
   } else if (s.IsNotFound()) {
     char str[5];
     EncodeFixed8(str, 's');
-    EncodeFixed32(str + 1, members.size());
+    EncodeFixed32(str + TYPE_SIZE, members.size());
     SetsMetaValue sets_meta_value(Slice(str, 5));
     version = sets_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_destination.Encode(), sets_meta_value.Encode());

@@ -31,7 +31,6 @@ class ListsMetaValue : public InternalValue {
     size_t usize = user_value_.size();
     size_t needed = usize + kVersionLength + 2 * kListValueIndexLength + kSuffixReserveLength + 2 * kTimestampLength;
     char* dst = ReAllocIfNeeded(needed);
-    char* start_pos = dst;
 
     memcpy(dst, user_value_.data(), usize);
     dst += usize;
@@ -46,7 +45,7 @@ class ListsMetaValue : public InternalValue {
     EncodeFixed64(dst, ctime_);
     dst += kTimestampLength;
     EncodeFixed64(dst, etime_);
-    return rocksdb::Slice(start_pos, needed);
+    return rocksdb::Slice(start_, needed);
   }
 
   uint64_t UpdateVersion() {
@@ -124,7 +123,7 @@ class ParsedListsMetaValue : public ParsedInternalValue {
       offset += kTimestampLength;
       etime_ = DecodeFixed64(internal_value_slice.data() + offset);
     }
-    count_ = DecodeFixed64(internal_value_slice.data() + 1);
+    count_ = DecodeFixed64(internal_value_slice.data() + TYPE_SIZE);
   }
 
   void StripSuffix() override {

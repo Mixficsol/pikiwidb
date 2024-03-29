@@ -364,7 +364,7 @@ Status Redis::HIncrby(const Slice& key, const Slice& field, int64_t value, int64
     }
   } else if (s.IsNotFound()) {
     EncodeFixed8(meta_value_buf, 'h');
-    EncodeFixed32(meta_value_buf + 1, 1);
+    EncodeFixed32(meta_value_buf + TYPE_SIZE, 1);
     HashesMetaValue hashes_meta_value(Slice(meta_value_buf, 5));
     version = hashes_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), hashes_meta_value.Encode());
@@ -450,7 +450,7 @@ Status Redis::HIncrbyfloat(const Slice& key, const Slice& field, const Slice& by
     }
   } else if (s.IsNotFound()) {
     EncodeFixed8(meta_value_buf, 'h');
-    EncodeFixed32(meta_value_buf + 1, 1);
+    EncodeFixed32(meta_value_buf + TYPE_SIZE, 1);
     HashesMetaValue hashes_meta_value(Slice(meta_value_buf, 5));
     version = hashes_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), hashes_meta_value.Encode());
@@ -641,7 +641,7 @@ Status Redis::HMSet(const Slice& key, const std::vector<FieldValue>& fvs) {
     }
   } else if (s.IsNotFound()) {
     EncodeFixed8(meta_value_buf, 'h');
-    EncodeFixed32(meta_value_buf + 1, filtered_fvs.size());
+    EncodeFixed32(meta_value_buf + TYPE_SIZE, filtered_fvs.size());
     HashesMetaValue hashes_meta_value(Slice(meta_value_buf, 5));
     version = hashes_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), hashes_meta_value.Encode());
@@ -712,7 +712,7 @@ Status Redis::HSet(const Slice& key, const Slice& field, const Slice& value, int
     }
   } else if (s.IsNotFound()) {
     EncodeFixed8(meta_value_buf, 'h');
-    EncodeFixed32(meta_value_buf + 1, 1);
+    EncodeFixed32(meta_value_buf + TYPE_SIZE, 1);
     HashesMetaValue hashes_meta_value(Slice(meta_value_buf, 5));
     version = hashes_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), hashes_meta_value.Encode());
@@ -772,7 +772,7 @@ Status Redis::HSetnx(const Slice& key, const Slice& field, const Slice& value, i
     }
   } else if (s.IsNotFound()) {
     EncodeFixed8(meta_value_buf, 'h');
-    EncodeFixed32(meta_value_buf + 1, 1);
+    EncodeFixed32(meta_value_buf + TYPE_SIZE, 1);
     HashesMetaValue hashes_meta_value(Slice(meta_value_buf, 5));
     version = hashes_meta_value.UpdateVersion();
     batch.Put(handles_[kMetaCF], base_meta_key.Encode(), hashes_meta_value.Encode());

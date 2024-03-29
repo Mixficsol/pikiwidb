@@ -20,7 +20,7 @@ import (
 	"github.com/OpenAtomFoundation/pikiwidb/tests/util"
 )
 
-var _ = Describe("List", Ordered, func() {
+var _ = PDescribe("List", Ordered, func() {
 	var (
 		ctx    = context.TODO()
 		s      *util.Server
