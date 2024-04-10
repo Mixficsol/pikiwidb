@@ -23,7 +23,7 @@ const uint64_t InitalRightIndex = 9223372036854775808U;
 class ListsMetaValue : public InternalValue {
  public:
   explicit ListsMetaValue(const rocksdb::Slice& user_value)
-      : InternalValue(Type::list, user_value), left_index_(InitalLeftIndex), right_index_(InitalRightIndex) {}
+      : InternalValue(Type::kList, user_value), left_index_(InitalLeftIndex), right_index_(InitalRightIndex) {}
 
   rocksdb::Slice Encode() override {
     size_t usize = user_value_.size();

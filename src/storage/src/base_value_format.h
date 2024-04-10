@@ -20,7 +20,7 @@ namespace storage {
 using Status = rocksdb::Status;
 using Slice = rocksdb::Slice;
 
-enum class Type : uint8_t { string = 0, hash, list, set, zset, nulltype };
+enum class Type : uint8_t { kString = 0, kHash = 1, kList = 2, kSet = 3, kZset = 4, kNulltype = 5 };
 
 class InternalValue {
  public:

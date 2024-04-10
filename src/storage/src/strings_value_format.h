@@ -18,7 +18,7 @@ namespace storage {
  */
 class StringsValue : public InternalValue {
  public:
-  explicit StringsValue(const rocksdb::Slice& user_value) : InternalValue(Type::string, user_value) {}
+  explicit StringsValue(const rocksdb::Slice& user_value) : InternalValue(Type::kString, user_value) {}
   virtual rocksdb::Slice Encode() override {
     size_t usize = user_value_.size();
     size_t needed = kTypeLength + usize + kSuffixReserveLength + 2 * kTimestampLength;

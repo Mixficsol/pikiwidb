@@ -33,7 +33,7 @@ Status Redis::ScanListsKeyNum(KeyInfo* key_info) {
   rocksdb::Iterator* iter = db_->NewIterator(iterator_options, handles_[kMetaCF]);
   for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
     ParsedListsMetaValue parsed_lists_meta_value(iter->value());
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       continue;
     }
     if (parsed_lists_meta_value.IsStale() || parsed_lists_meta_value.Count() == 0) {
@@ -73,7 +73,7 @@ Status Redis::ListsPKPatternMatchDel(const std::string& pattern, int32_t* ret) {
     ParsedBaseMetaKey parsed_meta_key(iter->key().ToString());
     meta_value = iter->value().ToString();
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       continue;
     }
     if (!parsed_lists_meta_value.IsStale() && (parsed_lists_meta_value.Count() != 0U) &&
@@ -118,7 +118,7 @@ Status Redis::LIndex(const Slice& key, int64_t index, std::string* element) {
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     uint64_t version = parsed_lists_meta_value.Version();
@@ -155,7 +155,7 @@ Status Redis::LInsert(const Slice& key, const BeforeOrAfter& before_or_after, co
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -259,7 +259,7 @@ Status Redis::LLen(const Slice& key, uint64_t* len) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -287,7 +287,7 @@ Status Redis::LPop(const Slice& key, int64_t count, std::vector<std::string>* el
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -338,7 +338,7 @@ Status Redis::LPush(const Slice& key, const std::vector<std::string>& values, ui
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale() || parsed_lists_meta_value.Count() == 0) {
@@ -387,7 +387,7 @@ Status Redis::LPushx(const Slice& key, const std::vector<std::string>& values, u
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -424,7 +424,7 @@ Status Redis::LRange(const Slice& key, int64_t start, int64_t stop, std::vector<
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -478,7 +478,7 @@ Status Redis::LRangeWithTTL(const Slice& key, int64_t start, int64_t stop, std::
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.Count() == 0) {
@@ -539,7 +539,7 @@ Status Redis::LRem(const Slice& key, int64_t count, const Slice& value, uint64_t
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -664,7 +664,7 @@ Status Redis::LSet(const Slice& key, int64_t index, const Slice& value) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -700,7 +700,7 @@ Status Redis::LTrim(const Slice& key, int64_t start, int64_t stop) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     uint64_t version = parsed_lists_meta_value.Version();
@@ -766,7 +766,7 @@ Status Redis::RPop(const Slice& key, int64_t count, std::vector<std::string>* el
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -817,7 +817,7 @@ Status Redis::RPoplpush(const Slice& source, const Slice& destination, std::stri
     s = db_->Get(default_read_options_, handles_[kMetaCF], base_source.Encode(), &meta_value);
     if (s.ok()) {
       ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-      if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+      if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
         return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
       }
       if (parsed_lists_meta_value.IsStale()) {
@@ -865,7 +865,7 @@ Status Redis::RPoplpush(const Slice& source, const Slice& destination, std::stri
   s = db_->Get(default_read_options_, handles_[kMetaCF], base_source.Encode(), &source_meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&source_meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -896,7 +896,7 @@ Status Redis::RPoplpush(const Slice& source, const Slice& destination, std::stri
   s = db_->Get(default_read_options_, handles_[kMetaCF], base_destination.Encode(), &destination_meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&destination_meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale() || parsed_lists_meta_value.Count() == 0) {
@@ -946,7 +946,7 @@ Status Redis::RPush(const Slice& key, const std::vector<std::string>& values, ui
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale() || parsed_lists_meta_value.Count() == 0) {
@@ -995,7 +995,7 @@ Status Redis::RPushx(const Slice& key, const std::vector<std::string>& values, u
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -1028,7 +1028,7 @@ Status Redis::ListsExpire(const Slice& key, uint64_t ttl) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -1056,7 +1056,7 @@ Status Redis::ListsDel(const Slice& key) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -1081,7 +1081,7 @@ Status Redis::ListsExpireat(const Slice& key, uint64_t timestamp) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -1107,7 +1107,7 @@ Status Redis::ListsPersist(const Slice& key) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -1134,7 +1134,7 @@ Status Redis::ListsTTL(const Slice& key, uint64_t* timestamp) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedListsMetaValue parsed_lists_meta_value(&meta_value);
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_lists_meta_value.IsStale()) {
@@ -1171,7 +1171,7 @@ void Redis::ScanLists() {
   auto meta_iter = db_->NewIterator(iterator_options, handles_[kMetaCF]);
   for (meta_iter->SeekToFirst(); meta_iter->Valid(); meta_iter->Next()) {
     ParsedListsMetaValue parsed_lists_meta_value(meta_iter->value());
-    if (!parsed_lists_meta_value.IsSameType(Type::list)) {
+    if (!parsed_lists_meta_value.IsSameType(Type::kList)) {
       continue;
     }
     ParsedBaseMetaKey parsed_meta_key(meta_iter->value());

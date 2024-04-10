@@ -661,13 +661,13 @@ rocksdb::Status Redis::Exists(const Slice& key) {
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
-    if (type == Type::set) {
+    if (type == Type::kSet) {
       return SCard(key, &ret);
-    } else if (type == Type::zset) {
+    } else if (type == Type::kZset) {
       return ZCard(key, &ret);
-    } else if (type == Type::hash) {
+    } else if (type == Type::kHash) {
       return HLen(key, &ret);
-    } else if (type == Type::list) {
+    } else if (type == Type::kList) {
       return LLen(key, &llen);
     } else {
       return Get(key, &value);
@@ -682,13 +682,13 @@ rocksdb::Status Redis::Del(const Slice& key) {
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
-    if (type == Type::set) {
+    if (type == Type::kSet) {
       return SetsDel(key);
-    } else if (type == Type::zset) {
+    } else if (type == Type::kZset) {
       return ZsetsDel(key);
-    } else if (type == Type::hash) {
+    } else if (type == Type::kHash) {
       return HashesDel(key);
-    } else if (type == Type::list) {
+    } else if (type == Type::kList) {
       return ListsDel(key);
     } else {
       return StringsDel(key);
@@ -703,13 +703,13 @@ rocksdb::Status Redis::Expire(const Slice& key, uint64_t ttl) {
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
-    if (type == Type::set) {
+    if (type == Type::kSet) {
       return SetsExpire(key, ttl);
-    } else if (type == Type::zset) {
+    } else if (type == Type::kZset) {
       return ZsetsExpire(key, ttl);
-    } else if (type == Type::hash) {
+    } else if (type == Type::kHash) {
       return HashesExpire(key, ttl);
-    } else if (type == Type::list) {
+    } else if (type == Type::kList) {
       return ListsExpire(key, ttl);
     } else {
       return StringsExpire(key, ttl);
@@ -724,13 +724,13 @@ rocksdb::Status Redis::Expireat(const Slice& key, uint64_t ttl) {
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
-    if (type == Type::set) {
+    if (type == Type::kSet) {
       return SetsExpireat(key, ttl);
-    } else if (type == Type::zset) {
+    } else if (type == Type::kZset) {
       return ZsetsExpireat(key, ttl);
-    } else if (type == Type::hash) {
+    } else if (type == Type::kHash) {
       return HashesExpireat(key, ttl);
-    } else if (type == Type::list) {
+    } else if (type == Type::kList) {
       return ListsExpireat(key, ttl);
     } else {
       return StringsExpireat(key, ttl);
@@ -1269,19 +1269,17 @@ rocksdb::Status Redis::Persist(const Slice& key) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       return SetsPersist(key);
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       return ZsetsPersist(key);
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       return HashesPersist(key);
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       return ListsPersist(key);
-    } else if (type == "y") {
-      return StringsPersist(key);
     } else {
-      return rocksdb::Status::NotFound();
+      return StringsPersist(key);
     }
   }
   return rocksdb::Status::NotFound();
@@ -1292,14 +1290,14 @@ rocksdb::Status Redis::TTL(const Slice& key, uint64_t* timestamp) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       return SetsTTL(key, timestamp);
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       return ZsetsTTL(key, timestamp);
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       return HashesTTL(key, timestamp);
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       return ListsTTL(key, timestamp);
     } else {
       return StringsTTL(key, timestamp);
@@ -1313,19 +1311,17 @@ rocksdb::Status Redis::GetType(const storage::Slice& key, std::string& types) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       types = "set";
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       types = "zset";
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       types = "hash";
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       types = "list";
-    } else if (type == "y") {
-      types = "string";
     } else {
-      types = "none";
+      types = "string";
     }
     return Status::OK();
   }
