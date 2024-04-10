@@ -61,17 +61,9 @@ Status Redis::Open(const StorageOptions& storage_options, const std::string& db_
   rocksdb::DBOptions db_ops(storage_options.options);
   db_ops.create_missing_column_families = true;
 
-  // Meta column-family options
-  rocksdb::ColumnFamilyOptions meta_cf_ops(storage_options.options);
-  rocksdb::BlockBasedTableOptions meta_cf_table_ops(table_ops);
-  meta_cf_ops.compaction_filter_factory = std::make_shared<MetaFilterFactory>();
-  if (!storage_options.share_block_cache && (storage_options.block_cache_size > 0)) {
-    meta_cf_table_ops.block_cache = rocksdb::NewLRUCache(storage_options.block_cache_size);
-  }
-  meta_cf_ops.table_factory.reset(rocksdb::NewBlockBasedTableFactory(meta_cf_table_ops));
-
-  // string column-family options
+  // meta & string column-family options
   rocksdb::ColumnFamilyOptions string_cf_ops(storage_options.options);
+  // TODO change compaction filter
   string_cf_ops.compaction_filter_factory = std::make_shared<StringsFilterFactory>();
   rocksdb::BlockBasedTableOptions string_table_ops(table_ops);
   if (!storage_options.share_block_cache && (storage_options.block_cache_size > 0)) {
@@ -123,6 +115,7 @@ Status Redis::Open(const StorageOptions& storage_options, const std::string& db_
   zset_score_cf_ops.table_factory.reset(rocksdb::NewBlockBasedTableFactory(zset_score_cf_table_ops));
 
   std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
+  // meta & string cf
   column_families.emplace_back(rocksdb::kDefaultColumnFamilyName, string_cf_ops);
   // hash CF
   column_families.emplace_back("hash_data_cf", hash_data_cf_ops);
@@ -133,8 +126,6 @@ Status Redis::Open(const StorageOptions& storage_options, const std::string& db_
   // zset CF
   column_families.emplace_back("zset_data_cf", zset_data_cf_ops);
   column_families.emplace_back("zset_score_cf", zset_score_cf_ops);
-  // meta CF
-  column_families.emplace_back("meta_cf", meta_cf_ops);
   return rocksdb::DB::Open(db_ops, db_path, column_families, &handles_, &db_);
 }
 

@@ -20,9 +20,11 @@ namespace storage {
 using Status = rocksdb::Status;
 using Slice = rocksdb::Slice;
 
+enum class Type : uint8_t { string = 0, hash, list, set, zset, nulltype };
+
 class InternalValue {
  public:
-  explicit InternalValue(const Slice& user_value) : user_value_(user_value) {}
+  explicit InternalValue(Type type, const Slice& user_value) : type_(type), user_value_(user_value) {}
   virtual ~InternalValue() {
     if (start_ != space_) {
       delete[] start_;
@@ -60,8 +62,8 @@ class InternalValue {
  protected:
   char space_[200];
   char* start_ = nullptr;
+  Type type_;
   Slice user_value_;
-  Slice type_;
   uint64_t version_ = 0;
   uint64_t etime_ = 0;
   uint64_t ctime_ = 0;
@@ -126,12 +128,14 @@ class ParsedInternalValue {
 
   virtual void StripSuffix() = 0;
 
+  bool IsSameType(const Type type) { return type_ == type; }
+
  protected:
   virtual void SetVersionToValue() = 0;
   virtual void SetEtimeToValue() = 0;
   virtual void SetCtimeToValue() = 0;
   std::string* value_ = nullptr;
-  Slice type_;
+  Type type_;
   Slice user_value_;
   uint64_t version_ = 0;
   uint64_t ctime_ = 0;
