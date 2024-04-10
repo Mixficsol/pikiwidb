@@ -141,13 +141,17 @@ class Redis {
   virtual Status ListsPersist(const Slice& key);
   virtual Status ZsetsPersist(const Slice& key);
   virtual Status SetsPersist(const Slice& key);
+  virtual Status Persist(const Slice& key);
 
   virtual Status StringsTTL(const Slice& key, uint64_t* timestamp);
   virtual Status HashesTTL(const Slice& key, uint64_t* timestamp);
   virtual Status ListsTTL(const Slice& key, uint64_t* timestamp);
   virtual Status ZsetsTTL(const Slice& key, uint64_t* timestamp);
   virtual Status SetsTTL(const Slice& key, uint64_t* timestamp);
+  virtual Status TTL(const Slice& key, uint64_t* timestamp);
 
+  virtual Status GetType(const Slice& key, std::string& types);
+  virtual Status IsExist(const Slice& key);
   // Strings Commands
   Status Append(const Slice& key, const Slice& value, int32_t* ret);
   Status BitCount(const Slice& key, int64_t start_offset, int64_t end_offset, int32_t* ret, bool have_range);
