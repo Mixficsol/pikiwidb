@@ -1264,6 +1264,85 @@ Status Redis::StringsExpireat(const Slice& key, uint64_t timestamp) {
   return s;
 }
 
+rocksdb::Status Redis::Persist(const Slice& key) {
+  std::string meta_value;
+  BaseMetaKey base_meta_key(key);
+  rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
+  if (s.ok()) {
+    Slice type = Slice(meta_value.data(), TYPE_SIZE);
+    if (type == "s") {
+      return SetsPersist(key);
+    } else if (type == "z") {
+      return ZsetsPersist(key);
+    } else if (type == "h") {
+      return HashesPersist(key);
+    } else if (type == "l") {
+      return ListsPersist(key);
+    } else if (type == "y") {
+      return StringsPersist(key);
+    } else {
+      return rocksdb::Status::NotFound();
+    }
+  }
+  return rocksdb::Status::NotFound();
+}
+
+rocksdb::Status Redis::TTL(const Slice& key, uint64_t* timestamp) {
+  std::string meta_value;
+  BaseMetaKey base_meta_key(key);
+  rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
+  if (s.ok()) {
+    Slice type = Slice(meta_value.data(), TYPE_SIZE);
+    if (type == "s") {
+      return SetsTTL(key, timestamp);
+    } else if (type == "z") {
+      return ZsetsTTL(key, timestamp);
+    } else if (type == "h") {
+      return HashesTTL(key, timestamp);
+    } else if (type == "l") {
+      return ListsTTL(key, timestamp);
+    } else {
+      return StringsTTL(key, timestamp);
+    }
+  }
+  return rocksdb::Status::NotFound();
+}
+
+rocksdb::Status Redis::GetType(const storage::Slice& key, std::string& types) {
+  std::string meta_value;
+  BaseMetaKey base_meta_key(key);
+  rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
+  if (s.ok()) {
+    Slice type = Slice(meta_value.data(), TYPE_SIZE);
+    if (type == "s") {
+      types = "set";
+    } else if (type == "z") {
+      types = "zset";
+    } else if (type == "h") {
+      types = "hash";
+    } else if (type == "l") {
+      types = "list";
+    } else if (type == "y") {
+      types = "string";
+    } else {
+      types = "none";
+    }
+    return Status::OK();
+  }
+  types = "none";
+  return rocksdb::Status::NotFound();
+}
+
+rocksdb::Status Redis::IsExist(const storage::Slice& key) {
+  std::string meta_value;
+  BaseMetaKey base_meta_key(key);
+  rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
+  if (s.ok()) {
+    return Status::OK();
+  }
+  return rocksdb::Status::NotFound();
+}
+
 Status Redis::StringsPersist(const Slice& key) {
   std::string value;
   ScopeRecordLock l(lock_mgr_, key);
