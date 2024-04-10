@@ -189,7 +189,7 @@ var _ = Describe("Keyspace", Ordered, func() {
 
 	})
 
-	FIt("persist", func() {
+	It("persist", func() {
 		// return 0 if key does not exist
 		Expect(client.Persist(ctx, DefaultKey).Val()).To(Equal(false))
 
@@ -208,7 +208,7 @@ var _ = Describe("Keyspace", Ordered, func() {
 		time.Sleep(2 * time.Second)
 	})
 
-	FIt("keys", func() {
+	PIt("keys", func() {
 		// empty
 		Expect(client.Keys(ctx, "*").Val()).To(Equal([]string{}))
 		Expect(client.Keys(ctx, "dummy").Val()).To(Equal([]string{}))
@@ -232,7 +232,7 @@ var _ = Describe("Keyspace", Ordered, func() {
 		Expect(client.Del(ctx, "a1", "k1", "k2", "k3", "k4", "k5").Err()).NotTo(HaveOccurred())
 	})
 
-	FIt("should pexpire", func() {
+	It("should pexpire", func() {
 		Expect(client.Set(ctx, DefaultKey, DefaultValue, 0).Val()).To(Equal(OK))
 		Expect(client.PExpire(ctx, DefaultKey, 3000*time.Millisecond).Val()).To(Equal(true))
 		Expect(client.PTTL(ctx, DefaultKey).Val()).NotTo(Equal(time.Duration(-2)))

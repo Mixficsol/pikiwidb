@@ -64,15 +64,12 @@ class ParsedBaseMetaValue : public ParsedInternalValue {
                           internal_value_str->size() - kBaseMetaValueSuffixLength - TYPE_SIZE);
       offset += user_value_.size();
       version_ = DecodeFixed64(internal_value_str->data() + offset);
-      std::cout << "version: " << version_ << std::endl;
       offset += sizeof(version_);
       memcpy(reserve_, internal_value_str->data() + offset, sizeof(reserve_));
       offset += sizeof(reserve_);
       ctime_ = DecodeFixed64(internal_value_str->data() + offset);
-      std::cout << "ctime: " << ctime_ << std::endl;
       offset += sizeof(ctime_);
       etime_ = DecodeFixed64(internal_value_str->data() + offset);
-      std::cout << "etime: " << etime_ << std::endl;
     }
     count_ = DecodeFixed32(internal_value_str->data() + TYPE_SIZE);
   }

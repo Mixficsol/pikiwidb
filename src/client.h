@@ -102,6 +102,11 @@ enum ClientFlag {
   kClientFlagMaster = (1 << 3),
 };
 
+enum class ClientState {
+  kOK,
+  kClosed,
+};
+
 class DB;
 struct PSlaveInfo;
 
@@ -121,6 +126,8 @@ class PClient : public std::enable_shared_from_this<PClient>, public CmdRes {
   bool SendPacket(const void* data, size_t size);
   bool SendPacket(UnboundedBuffer& data);
   bool SendPacket(const evbuffer_iovec* iovecs, size_t nvecs);
+
+  void WriteReply2Client();
 
   void Close();
 
@@ -197,6 +204,12 @@ class PClient : public std::enable_shared_from_this<PClient>, public CmdRes {
   bool GetAuth() const { return auth_; }
   void RewriteCmd(std::vector<std::string>& params) { parser_.SetParams(params); }
 
+  inline size_t ParamsSize() const { return params_.size(); }
+
+  inline ClientState State() const { return state_; }
+
+  inline void SetState(ClientState state) { state_ = state; }
+
   // All parameters of this command (including the command itself)
   // e.g：["set","key","value"]
   std::span<std::string> argv_;
@@ -245,6 +258,8 @@ class PClient : public std::enable_shared_from_this<PClient>, public CmdRes {
   // auth
   bool auth_ = false;
   time_t last_auth_ = 0;
+
+  ClientState state_;
 
   static thread_local PClient* s_current;
 };
