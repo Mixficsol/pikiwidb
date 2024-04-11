@@ -22,8 +22,12 @@ bool SIsMemberCmd::DoInitial(PClient* client) {
 }
 void SIsMemberCmd::DoCmd(PClient* client) {
   int32_t reply_Num = 0;  // only change to 1 if ismember . key not exist it is 0
-  PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SIsmember(client->Key(), client->argv_[2], &reply_Num);
-
+  storage::Status s =
+      PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SIsmember(client->Key(), client->argv_[2], &reply_Num);
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   client->AppendInteger(reply_Num);
 }
 
@@ -66,12 +70,14 @@ void SUnionStoreCmd::DoCmd(PClient* client) {
                           ->GetStorage()
                           ->SUnionstore(client->Keys().at(0), keys, value_to_dest, &ret);
 
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!s.ok()) {
     client->SetRes(CmdRes::kSyntaxErr, "sunionstore cmd error");
   }
-  if (s.ToString() == ErrTypeMessage) {
-    client->SetRes(CmdRes::kmultikey);
-  }
+
   client->AppendInteger(ret);
 }
 SInterCmd::SInterCmd(const std::string& name, int16_t arity)
@@ -87,12 +93,13 @@ bool SInterCmd::DoInitial(PClient* client) {
 void SInterCmd::DoCmd(PClient* client) {
   std::vector<std::string> res_vt;
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SInter(client->Keys(), &res_vt);
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!s.ok()) {
     client->SetRes(CmdRes::kErrOther, "sinter cmd error");
     return;
-  }
-  if (s.ToString() == ErrTypeMessage) {
-    client->SetRes(CmdRes::kmultikey);
   }
   client->AppendStringVector(res_vt);
 }
@@ -110,11 +117,12 @@ void SRemCmd::DoCmd(PClient* client) {
   int32_t reply_num = 0;
   storage::Status s =
       PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SRem(client->Key(), to_delete_members, &reply_num);
-  if (!s.ok()) {
-    client->SetRes(CmdRes::kErrOther, "srem cmd error");
-  }
   if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
+    return;
+  }
+  if (!s.ok()) {
+    client->SetRes(CmdRes::kErrOther, "srem cmd error");
   }
   client->AppendInteger(reply_num);
 }
@@ -131,11 +139,12 @@ bool SUnionCmd::DoInitial(PClient* client) {
 void SUnionCmd::DoCmd(PClient* client) {
   std::vector<std::string> res_vt;
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SUnion(client->Keys(), &res_vt);
-  if (!s.ok()) {
-    client->SetRes(CmdRes::kErrOther, "sunion cmd error");
-  }
   if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
+    return;
+  }
+  if (!s.ok()) {
+    client->SetRes(CmdRes::kErrOther, "sunion cmd error");
   }
   client->AppendStringVector(res_vt);
 }
@@ -262,6 +271,10 @@ void SPopCmd::DoCmd(PClient* client) {
     std::vector<std::string> delete_member;
     storage::Status s =
         PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SPop(client->Key(), &delete_member, cnt);
+    if (s.ToString() == ErrTypeMessage) {
+      client->SetRes(CmdRes::kmultikey);
+      return;
+    }
     if (!s.ok()) {
       client->SetRes(CmdRes::kSyntaxErr, "spop cmd error");
       return;
@@ -406,6 +419,10 @@ void SScanCmd::DoCmd(PClient* client) {
   auto status = PSTORE.GetBackend(client->GetCurrentDB())
                     ->GetStorage()
                     ->SScan(client->Key(), cursor, pattern, count, &members, &next_cursor);
+  if (status.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!status.ok() && !status.IsNotFound()) {
     client->SetRes(CmdRes::kErrOther, status.ToString());
     return;

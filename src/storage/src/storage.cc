@@ -1431,10 +1431,9 @@ int32_t Storage::TTL(const Slice& key) {
 }
 
 Status Storage::GetType(const std::string& key, std::string& types) {
-  std::string value;
   auto& inst = GetDBInstance(key);
   Status s = inst->GetType(key, types);
-  return Status::OK();
+  return s;
 }
 
 Status Storage::Keys(const DataType& data_type, const std::string& pattern, std::vector<std::string>* keys) {

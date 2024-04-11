@@ -30,7 +30,7 @@ set ::all_tests {
     # unit/type/set
     # unit/type/zset
     # unit/type/string
-    # unit/type/hash
+    unit/type/hash
     # unit/expire
     # unit/protocol
     # unit/other

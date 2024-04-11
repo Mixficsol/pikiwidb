@@ -312,6 +312,10 @@ void HScanCmd::DoCmd(PClient* client) {
   auto status = PSTORE.GetBackend(client->GetCurrentDB())
                     ->GetStorage()
                     ->HScan(client->Key(), cursor, pattern, count, &fvs, &next_cursor);
+  if (status.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!status.ok() && !status.IsNotFound()) {
     client->SetRes(CmdRes::kErrOther, status.ToString());
     return;
@@ -465,6 +469,10 @@ void HRandFieldCmd::DoCmd(PClient* client) {
   // execute command
   std::vector<std::string> res;
   auto s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->HRandField(client->Key(), count, with_values, &res);
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (s.IsNotFound()) {
     client->AppendString("");
     return;
@@ -498,6 +506,10 @@ void HExistsCmd::DoCmd(PClient* client) {
   // execute command
   std::vector<std::string> res;
   auto s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->HExists(client->Key(), field);
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!s.ok() && !s.IsNotFound()) {
     return client->SetRes(CmdRes::kErrOther, s.ToString());
   }

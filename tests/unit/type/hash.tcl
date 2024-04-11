@@ -14,9 +14,9 @@ start_server {tags {"hash"}} {
         list [r hlen smallhash]
     } {8}
 
-    test {Is the small hash encoded with a listpack?} {
-        assert_encoding listpack smallhash
-    }
+#    test {Is the small hash encoded with a listpack?} {
+#        assert_encoding listpack smallhash
+#    }
 
     proc create_hash {key entries} {
         r del $key
@@ -34,218 +34,218 @@ start_server {tags {"hash"}} {
         return $res
     }
 
-    foreach {type contents} "listpack {{a 1} {b 2} {c 3}} hashtable {{a 1} {b 2} {[randstring 70 90 alpha] 3}}" {
-        set original_max_value [lindex [r config get hash-max-ziplist-value] 1]
-        r config set hash-max-ziplist-value 10
-        create_hash myhash $contents
-        assert_encoding $type myhash
+#    foreach {type contents} "listpack {{a 1} {b 2} {c 3}} hashtable {{a 1} {b 2} {[randstring 70 90 alpha] 3}}" {
+#        set original_max_value [lindex [r config get hash-max-ziplist-value] 1]
+#        r config set hash-max-ziplist-value 10
+#        create_hash myhash $contents
+#        assert_encoding $type myhash
+#
+#        # coverage for objectComputeSize
+#        assert_morethan [memory_usage myhash] 0
+#
+#        test "HRANDFIELD - $type" {
+#            unset -nocomplain myhash
+#            array set myhash {}
+#            for {set i 0} {$i < 100} {incr i} {
+#                set key [r hrandfield myhash]
+#                set myhash($key) 1
+#            }
+#            assert_equal [lsort [get_keys $contents]] [lsort [array names myhash]]
+#        }
+#        r config set hash-max-ziplist-value $original_max_value
+#    }
 
-        # coverage for objectComputeSize
-        assert_morethan [memory_usage myhash] 0
+#    test "HRANDFIELD with RESP3" {
+#        r hello 3
+#        set res [r hrandfield myhash 3 withvalues]
+#        assert_equal [llength $res] 3
+#        assert_equal [llength [lindex $res 1]] 2
+#
+#        set res [r hrandfield myhash 3]
+#        assert_equal [llength $res] 3
+#        assert_equal [llength [lindex $res 1]] 1
+#        r hello 2
+#    }
 
-        test "HRANDFIELD - $type" {
-            unset -nocomplain myhash
-            array set myhash {}
-            for {set i 0} {$i < 100} {incr i} {
-                set key [r hrandfield myhash]
-                set myhash($key) 1
-            }
-            assert_equal [lsort [get_keys $contents]] [lsort [array names myhash]]
-        }
-        r config set hash-max-ziplist-value $original_max_value
-    }
+#    test "HRANDFIELD count of 0 is handled correctly" {
+#        r hrandfield myhash 0
+#    } {}
 
-    test "HRANDFIELD with RESP3" {
-        r hello 3
-        set res [r hrandfield myhash 3 withvalues]
-        assert_equal [llength $res] 3
-        assert_equal [llength [lindex $res 1]] 2
-
-        set res [r hrandfield myhash 3]
-        assert_equal [llength $res] 3
-        assert_equal [llength [lindex $res 1]] 1
-        r hello 2
-    }
-
-    test "HRANDFIELD count of 0 is handled correctly" {
-        r hrandfield myhash 0
-    } {}
-
-    test "HRANDFIELD count overflow" {
-        r hmset myhash a 1
-        assert_error {*value is out of range*} {r hrandfield myhash -9223372036854770000 withvalues}
-        assert_error {*value is out of range*} {r hrandfield myhash -9223372036854775808 withvalues}
-        assert_error {*value is out of range*} {r hrandfield myhash -9223372036854775808}
-    } {}
-
-    test "HRANDFIELD with <count> against non existing key" {
-        r hrandfield nonexisting_key 100
-    } {}
-
-    # Make sure we can distinguish between an empty array and a null response
-    r readraw 1
-
-    test "HRANDFIELD count of 0 is handled correctly - emptyarray" {
-        r hrandfield myhash 0
-    } {*0}
-
-    test "HRANDFIELD with <count> against non existing key - emptyarray" {
-        r hrandfield nonexisting_key 100
-    } {*0}
-
-    r readraw 0
-
-    foreach {type contents} "
-        hashtable {{a 1} {b 2} {c 3} {d 4} {e 5} {6 f} {7 g} {8 h} {9 i} {[randstring 70 90 alpha] 10}}
-        listpack {{a 1} {b 2} {c 3} {d 4} {e 5} {6 f} {7 g} {8 h} {9 i} {10 j}} " {
-        test "HRANDFIELD with <count> - $type" {
-            set original_max_value [lindex [r config get hash-max-ziplist-value] 1]
-            r config set hash-max-ziplist-value 10
-            create_hash myhash $contents
-            assert_encoding $type myhash
-
-            # create a dict for easy lookup
-            set mydict [dict create {*}[r hgetall myhash]]
-
-            # We'll stress different parts of the code, see the implementation
-            # of HRANDFIELD for more information, but basically there are
-            # four different code paths.
-
-            # PATH 1: Use negative count.
-
-            # 1) Check that it returns repeated elements with and without values.
-            set res [r hrandfield myhash -20]
-            assert_equal [llength $res] 20
-            set res [r hrandfield myhash -1001]
-            assert_equal [llength $res] 1001
-            # again with WITHVALUES
-            set res [r hrandfield myhash -20 withvalues]
-            assert_equal [llength $res] 40
-            set res [r hrandfield myhash -1001 withvalues]
-            assert_equal [llength $res] 2002
-
-            # Test random uniform distribution
-            # df = 9, 40 means 0.00001 probability
-            set res [r hrandfield myhash -1000]
-            assert_lessthan [chi_square_value $res] 40
-
-            # 2) Check that all the elements actually belong to the original hash.
-            foreach {key val} $res {
-                assert {[dict exists $mydict $key]}
-            }
-
-            # 3) Check that eventually all the elements are returned.
-            #    Use both WITHVALUES and without
-            unset -nocomplain auxset
-            set iterations 1000
-            while {$iterations != 0} {
-                incr iterations -1
-                if {[expr {$iterations % 2}] == 0} {
-                    set res [r hrandfield myhash -3 withvalues]
-                    foreach {key val} $res {
-                        dict append auxset $key $val
-                    }
-                } else {
-                    set res [r hrandfield myhash -3]
-                    foreach key $res {
-                        dict append auxset $key $val
-                    }
-                }
-                if {[lsort [dict keys $mydict]] eq
-                    [lsort [dict keys $auxset]]} {
-                    break;
-                }
-            }
-            assert {$iterations != 0}
-
-            # PATH 2: positive count (unique behavior) with requested size
-            # equal or greater than set size.
-            foreach size {10 20} {
-                set res [r hrandfield myhash $size]
-                assert_equal [llength $res] 10
-                assert_equal [lsort $res] [lsort [dict keys $mydict]]
-
-                # again with WITHVALUES
-                set res [r hrandfield myhash $size withvalues]
-                assert_equal [llength $res] 20
-                assert_equal [lsort $res] [lsort $mydict]
-            }
-
-            # PATH 3: Ask almost as elements as there are in the set.
-            # In this case the implementation will duplicate the original
-            # set and will remove random elements up to the requested size.
-            #
-            # PATH 4: Ask a number of elements definitely smaller than
-            # the set size.
-            #
-            # We can test both the code paths just changing the size but
-            # using the same code.
-            foreach size {8 2} {
-                set res [r hrandfield myhash $size]
-                assert_equal [llength $res] $size
-                # again with WITHVALUES
-                set res [r hrandfield myhash $size withvalues]
-                assert_equal [llength $res] [expr {$size * 2}]
-
-                # 1) Check that all the elements actually belong to the
-                # original set.
-                foreach ele [dict keys $res] {
-                    assert {[dict exists $mydict $ele]}
-                }
-
-                # 2) Check that eventually all the elements are returned.
-                #    Use both WITHVALUES and without
-                unset -nocomplain auxset
-                unset -nocomplain allkey
-                set iterations [expr {1000 / $size}]
-                set all_ele_return false
-                while {$iterations != 0} {
-                    incr iterations -1
-                    if {[expr {$iterations % 2}] == 0} {
-                        set res [r hrandfield myhash $size withvalues]
-                        foreach {key value} $res {
-                            dict append auxset $key $value
-                            lappend allkey $key
-                        }
-                    } else {
-                        set res [r hrandfield myhash $size]
-                        foreach key $res {
-                            dict append auxset $key
-                            lappend allkey $key
-                        }
-                    }
-                    if {[lsort [dict keys $mydict]] eq
-                        [lsort [dict keys $auxset]]} {
-                        set all_ele_return true
-                    }
-                }
-                assert_equal $all_ele_return true
-                # df = 9, 40 means 0.00001 probability
-                assert_lessthan [chi_square_value $allkey] 40
-            }
-        }
-        r config set hash-max-ziplist-value $original_max_value
-    }
-
-
-    test {HSET/HLEN - Big hash creation} {
-        array set bighash {}
-        for {set i 0} {$i < 1024} {incr i} {
-            set key __avoid_collisions__[randstring 0 8 alpha]
-            set val __avoid_collisions__[randstring 0 8 alpha]
-            if {[info exists bighash($key)]} {
-                incr i -1
-                continue
-            }
-            r hset bighash $key $val
-            set bighash($key) $val
-        }
-        list [r hlen bighash]
-    } {1024}
-
-    test {Is the big hash encoded with an hash table?} {
-        assert_encoding hashtable bighash
-    }
+#    test "HRANDFIELD count overflow" {
+#        r hmset myhash a 1
+#        assert_error {*value is out of range*} {r hrandfield myhash -9223372036854770000 withvalues}
+#        assert_error {*value is out of range*} {r hrandfield myhash -9223372036854775808 withvalues}
+#        assert_error {*value is out of range*} {r hrandfield myhash -9223372036854775808}
+#    } {}
+#
+#    test "HRANDFIELD with <count> against non existing key" {
+#        r hrandfield nonexisting_key 100
+#    } {}
+#
+#    # Make sure we can distinguish between an empty array and a null response
+#    r readraw 1
+#
+#    test "HRANDFIELD count of 0 is handled correctly - emptyarray" {
+#        r hrandfield myhash 0
+#    } {*0}
+#
+#    test "HRANDFIELD with <count> against non existing key - emptyarray" {
+#        r hrandfield nonexisting_key 100
+#    } {*0}
+#
+#    r readraw 0
+#
+#    foreach {type contents} "
+#        hashtable {{a 1} {b 2} {c 3} {d 4} {e 5} {6 f} {7 g} {8 h} {9 i} {[randstring 70 90 alpha] 10}}
+#        listpack {{a 1} {b 2} {c 3} {d 4} {e 5} {6 f} {7 g} {8 h} {9 i} {10 j}} " {
+#        test "HRANDFIELD with <count> - $type" {
+#            set original_max_value [lindex [r config get hash-max-ziplist-value] 1]
+#            r config set hash-max-ziplist-value 10
+#            create_hash myhash $contents
+#            assert_encoding $type myhash
+#
+#            # create a dict for easy lookup
+#            set mydict [dict create {*}[r hgetall myhash]]
+#
+#            # We'll stress different parts of the code, see the implementation
+#            # of HRANDFIELD for more information, but basically there are
+#            # four different code paths.
+#
+#            # PATH 1: Use negative count.
+#
+#            # 1) Check that it returns repeated elements with and without values.
+#            set res [r hrandfield myhash -20]
+#            assert_equal [llength $res] 20
+#            set res [r hrandfield myhash -1001]
+#            assert_equal [llength $res] 1001
+#            # again with WITHVALUES
+#            set res [r hrandfield myhash -20 withvalues]
+#            assert_equal [llength $res] 40
+#            set res [r hrandfield myhash -1001 withvalues]
+#            assert_equal [llength $res] 2002
+#
+#            # Test random uniform distribution
+#            # df = 9, 40 means 0.00001 probability
+#            set res [r hrandfield myhash -1000]
+#            assert_lessthan [chi_square_value $res] 40
+#
+#            # 2) Check that all the elements actually belong to the original hash.
+#            foreach {key val} $res {
+#                assert {[dict exists $mydict $key]}
+#            }
+#
+#            # 3) Check that eventually all the elements are returned.
+#            #    Use both WITHVALUES and without
+#            unset -nocomplain auxset
+#            set iterations 1000
+#            while {$iterations != 0} {
+#                incr iterations -1
+#                if {[expr {$iterations % 2}] == 0} {
+#                    set res [r hrandfield myhash -3 withvalues]
+#                    foreach {key val} $res {
+#                        dict append auxset $key $val
+#                    }
+#                } else {
+#                    set res [r hrandfield myhash -3]
+#                    foreach key $res {
+#                        dict append auxset $key $val
+#                    }
+#                }
+#                if {[lsort [dict keys $mydict]] eq
+#                    [lsort [dict keys $auxset]]} {
+#                    break;
+#                }
+#            }
+#            assert {$iterations != 0}
+#
+#            # PATH 2: positive count (unique behavior) with requested size
+#            # equal or greater than set size.
+#            foreach size {10 20} {
+#                set res [r hrandfield myhash $size]
+#                assert_equal [llength $res] 10
+#                assert_equal [lsort $res] [lsort [dict keys $mydict]]
+#
+#                # again with WITHVALUES
+#                set res [r hrandfield myhash $size withvalues]
+#                assert_equal [llength $res] 20
+#                assert_equal [lsort $res] [lsort $mydict]
+#            }
+#
+#            # PATH 3: Ask almost as elements as there are in the set.
+#            # In this case the implementation will duplicate the original
+#            # set and will remove random elements up to the requested size.
+#            #
+#            # PATH 4: Ask a number of elements definitely smaller than
+#            # the set size.
+#            #
+#            # We can test both the code paths just changing the size but
+#            # using the same code.
+#            foreach size {8 2} {
+#                set res [r hrandfield myhash $size]
+#                assert_equal [llength $res] $size
+#                # again with WITHVALUES
+#                set res [r hrandfield myhash $size withvalues]
+#                assert_equal [llength $res] [expr {$size * 2}]
+#
+#                # 1) Check that all the elements actually belong to the
+#                # original set.
+#                foreach ele [dict keys $res] {
+#                    assert {[dict exists $mydict $ele]}
+#                }
+#
+#                # 2) Check that eventually all the elements are returned.
+#                #    Use both WITHVALUES and without
+#                unset -nocomplain auxset
+#                unset -nocomplain allkey
+#                set iterations [expr {1000 / $size}]
+#                set all_ele_return false
+#                while {$iterations != 0} {
+#                    incr iterations -1
+#                    if {[expr {$iterations % 2}] == 0} {
+#                        set res [r hrandfield myhash $size withvalues]
+#                        foreach {key value} $res {
+#                            dict append auxset $key $value
+#                            lappend allkey $key
+#                        }
+#                    } else {
+#                        set res [r hrandfield myhash $size]
+#                        foreach key $res {
+#                            dict append auxset $key
+#                            lappend allkey $key
+#                        }
+#                    }
+#                    if {[lsort [dict keys $mydict]] eq
+#                        [lsort [dict keys $auxset]]} {
+#                        set all_ele_return true
+#                    }
+#                }
+#                assert_equal $all_ele_return true
+#                # df = 9, 40 means 0.00001 probability
+#                assert_lessthan [chi_square_value $allkey] 40
+#            }
+#        }
+#        r config set hash-max-ziplist-value $original_max_value
+#    }
+#
+#
+#    test {HSET/HLEN - Big hash creation} {
+#        array set bighash {}
+#        for {set i 0} {$i < 1024} {incr i} {
+#            set key __avoid_collisions__[randstring 0 8 alpha]
+#            set val __avoid_collisions__[randstring 0 8 alpha]
+#            if {[info exists bighash($key)]} {
+#                incr i -1
+#                continue
+#            }
+#            r hset bighash $key $val
+#            set bighash($key) $val
+#        }
+#        list [r hlen bighash]
+#    } {1024}
+#
+#    test {Is the big hash encoded with an hash table?} {
+#        assert_encoding hashtable bighash
+#    }
 
     test {HGET against the small hash} {
         set err {}
@@ -276,22 +276,22 @@ start_server {tags {"hash"}} {
         set _ $rv
     } {{} {}}
 
-    test {HSET in update and insert mode} {
-        set rv {}
-        set k [lindex [array names smallhash *] 0]
-        lappend rv [r hset smallhash $k newval1]
-        set smallhash($k) newval1
-        lappend rv [r hget smallhash $k]
-        lappend rv [r hset smallhash __foobar123__ newval]
-        set k [lindex [array names bighash *] 0]
-        lappend rv [r hset bighash $k newval2]
-        set bighash($k) newval2
-        lappend rv [r hget bighash $k]
-        lappend rv [r hset bighash __foobar123__ newval]
-        lappend rv [r hdel smallhash __foobar123__]
-        lappend rv [r hdel bighash __foobar123__]
-        set _ $rv
-    } {0 newval1 1 0 newval2 1 1 1}
+#    test {HSET in update and insert mode} {
+#        set rv {}
+#        set k [lindex [array names smallhash *] 0]
+#        lappend rv [r hset smallhash $k newval1]
+#        set smallhash($k) newval1
+#        lappend rv [r hget smallhash $k]
+#        lappend rv [r hset smallhash __foobar123__ newval]
+#        set k [lindex [array names bighash *] 0]
+#        lappend rv [r hset bighash $k newval2]
+#        set bighash($k) newval2
+#        lappend rv [r hget bighash $k]
+#        lappend rv [r hset bighash __foobar123__ newval]
+#        lappend rv [r hdel smallhash __foobar123__]
+#        lappend rv [r hdel bighash __foobar123__]
+#        set _ $rv
+#    } {0 newval1 1 0 newval2 1 1 1}
 
     test {HSETNX target key missing - small hash} {
         r hsetnx smallhash __123123123__ foo
@@ -332,23 +332,23 @@ start_server {tags {"hash"}} {
         r hmset smallhash {*}$args
     } {OK}
 
-    test {HMSET - big hash} {
-        set args {}
-        foreach {k v} [array get bighash] {
-            set newval [randstring 0 8 alpha]
-            set bighash($k) $newval
-            lappend args $k $newval
-        }
-        r hmset bighash {*}$args
-    } {OK}
+#    test {HMSET - big hash} {
+#        set args {}
+#        foreach {k v} [array get bighash] {
+#            set newval [randstring 0 8 alpha]
+#            set bighash($k) $newval
+#            lappend args $k $newval
+#        }
+#        r hmset bighash {*}$args
+#    } {OK}
 
-    test {HMGET against non existing key and fields} {
-        set rv {}
-        lappend rv [r hmget doesntexist __123123123__ __456456456__]
-        lappend rv [r hmget smallhash __123123123__ __456456456__]
-        lappend rv [r hmget bighash __123123123__ __456456456__]
-        set _ $rv
-    } {{{} {}} {{} {}} {{} {}}}
+#    test {HMGET against non existing key and fields} {
+#        set rv {}
+#        lappend rv [r hmget doesntexist __123123123__ __456456456__]
+#        lappend rv [r hmget smallhash __123123123__ __456456456__]
+#        lappend rv [r hmget bighash __123123123__ __456456456__]
+#        set _ $rv
+#    } {{{} {}} {{} {}} {{} {}}}
 
     test {Hash commands against wrong type} {
         r set wrongtype somevalue

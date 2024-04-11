@@ -289,6 +289,8 @@ void ZRemrangebyrankCmd::DoCmd(PClient* client) {
   s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->ZRemrangebyrank(client->Key(), start, end, &ret);
   if (s.ok() || s.IsNotFound()) {
     client->AppendInteger(ret);
+  } else if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
   }
@@ -352,6 +354,10 @@ void ZRevrangebyscoreCmd::DoCmd(PClient* client) {
                           ->GetStorage()
                           ->ZRevrangebyscore(client->Key(), min_score, max_score, left_close, right_close, count,
                                              offset, &score_members);
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!s.ok() && !s.IsNotFound()) {
     client->SetRes(CmdRes::kErrOther, s.ToString());
     return;
@@ -390,6 +396,10 @@ bool ZCardCmd::DoInitial(PClient* client) {
 void ZCardCmd::DoCmd(PClient* client) {
   int32_t reply_Num = 0;
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->ZCard(client->Key(), &reply_Num);
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!s.ok()) {
     client->SetRes(CmdRes::kSyntaxErr, "ZCard cmd error");
     return;
@@ -502,6 +512,10 @@ void ZRangeCmd::DoCmd(PClient* client) {
               ->ZRevrange(client->Key(), start, stop, &score_members);
     }
   }
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!s.ok() && !s.IsNotFound()) {
     client->SetRes(CmdRes::kErrOther, s.ToString());
     return;
@@ -555,6 +569,8 @@ void ZScoreCmd::DoCmd(PClient* client) {
   s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->ZScore(client->Key(), client->argv_[2], &score);
   if (s.ok() || s.IsNotFound()) {
     client->AppendString(std::to_string(score));
+  } else if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
   }
@@ -605,6 +621,10 @@ void ZRangebylexCmd::DoCmd(PClient* client) {
   s = PSTORE.GetBackend(client->GetCurrentDB())
           ->GetStorage()
           ->ZRangebylex(client->Key(), min_member, max_member, left_close, right_close, &members);
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!s.ok() && !s.IsNotFound()) {
     client->SetRes(CmdRes::kErrOther, s.ToString());
     return;
@@ -662,6 +682,10 @@ void ZRevrangebylexCmd::DoCmd(PClient* client) {
   s = PSTORE.GetBackend(client->GetCurrentDB())
           ->GetStorage()
           ->ZRangebylex(client->Key(), min_member, max_member, left_close, right_close, &members);
+  if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
+    return;
+  }
   if (!s.ok() && !s.IsNotFound()) {
     client->SetRes(CmdRes::kErrOther, s.ToString());
     return;
@@ -693,6 +717,8 @@ void ZRankCmd::DoCmd(PClient* client) {
     client->AppendInteger(rank);
   } else if (s.IsNotFound()) {
     client->AppendContent("$-1");
+  } else if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
   }
@@ -714,6 +740,8 @@ void ZRevrankCmd::DoCmd(PClient* client) {
     client->AppendInteger(revrank);
   } else if (s.IsNotFound()) {
     client->AppendContent("$-1");
+  } else if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
   }
@@ -734,6 +762,8 @@ void ZRemCmd::DoCmd(PClient* client) {
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->ZRem(client->Key(), members, &deleted);
   if (s.ok() || s.IsNotFound()) {
     client->AppendInteger(deleted);
+  } else if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
   }
@@ -763,6 +793,8 @@ void ZIncrbyCmd::DoCmd(PClient* client) {
     int64_t len = pstd::D2string(buf, sizeof(buf), score);
     client->AppendStringLen(len);
     client->AppendContent(buf);
+  } else if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
   }
@@ -793,6 +825,8 @@ void ZRemrangebyscoreCmd::DoCmd(PClient* client) {
                           ->ZRemrangebyscore(client->Key(), min_score, max_score, left_close, right_close, &s_ret);
   if (s.ok()) {
     client->AppendInteger(s_ret);
+  } else if (s.ToString() == ErrTypeMessage) {
+    client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
   }

@@ -39,6 +39,11 @@ start_server [list overrides [list save ""] ] {
         r llen list2
     } {2}
 
+    test {LINSERT against non-list value error} {
+        r set k1 v1
+        assert_error {WRONGTYPE Operation against a key holding the wrong kind of value*} {r linsert k1 after 0 0}
+    }
+
     test "$container node check compression with lset" {
         r flushdb
         r lpush list3 [string repeat a $size]
