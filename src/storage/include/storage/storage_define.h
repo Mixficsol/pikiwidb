@@ -32,13 +32,12 @@ const int kTypeLength = 1;
 const int kTimestampLength = 8;
 
 enum ColumnFamilyIndex {
-  kStringsCF = 0,
+  kMetaCF = 0,
   kHashesDataCF = 1,
   kSetsDataCF = 2,
   kListsDataCF = 3,
   kZsetsDataCF = 4,
   kZsetsScoreCF = 5,
-  kMetaCF = 6,
 };
 
 const static char kNeedTransformCharacter = '\u0000';

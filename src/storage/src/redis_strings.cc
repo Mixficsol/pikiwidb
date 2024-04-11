@@ -15,9 +15,10 @@
 #include "src/scope_snapshot.h"
 #include "src/strings_filter.h"
 #include "storage/util.h"
-#include "string_meta_value_format.h"
 
 namespace storage {
+
+// TODO(dingxiaoshuai123) change
 Status Redis::ScanStringsKeyNum(KeyInfo* key_info) {
   uint64_t keys = 0;
   uint64_t expires = 0;
@@ -57,6 +58,7 @@ Status Redis::ScanStringsKeyNum(KeyInfo* key_info) {
   return Status::OK();
 }
 
+// TODO(dingxiaoshuai123) change
 Status Redis::StringsPKPatternMatchDel(const std::string& pattern, int32_t* ret) {
   rocksdb::ReadOptions iterator_options;
   const rocksdb::Snapshot* snapshot;
@@ -78,7 +80,6 @@ Status Redis::StringsPKPatternMatchDel(const std::string& pattern, int32_t* ret)
     if (!parsed_strings_value.IsStale() &&
         (StringMatch(pattern.data(), pattern.size(), key.data(), key.size(), 0) != 0)) {
       batch.Delete(handles_[kMetaCF], key);
-      batch.Delete(handles_[kStringsCF], key);
     }
     // In order to be more efficient, we use batch deletion here
     if (static_cast<size_t>(batch.Count()) >= BATCH_DELETE_LIMIT) {
@@ -131,11 +132,7 @@ Status Redis::Append(const Slice& key, const Slice& value, int32_t* ret) {
   } else if (s.IsNotFound()) {
     *ret = static_cast<int32_t>(value.size());
     StringsValue strings_value(value);
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
     return db_->Write(default_write_options_, &batch);
   }
   return s;
@@ -287,11 +284,7 @@ Status Redis::BitOp(BitOpType op, const std::string& dest_key, const std::vector
   ScopeRecordLock l(lock_mgr_, dest_key);
   BaseKey base_dest_key(dest_key);
   rocksdb::WriteBatch batch;
-  char str[1];
-  EncodeFixed8(str, 'y');
-  StringMetaValue string_meta_value(Slice(str, 1));
-  batch.Put(handles_[kMetaCF], base_dest_key.Encode(), string_meta_value.Encode());
-  batch.Put(handles_[kStringsCF], base_dest_key.Encode(), strings_value.Encode());
+  batch.Put(handles_[kMetaCF], base_dest_key.Encode(), strings_value.Encode());
   return db_->Write(default_write_options_, &batch);
 }
 
@@ -332,11 +325,7 @@ Status Redis::Decrby(const Slice& key, int64_t value, int64_t* ret) {
     new_value = std::to_string(*ret);
     StringsValue strings_value(new_value);
     rocksdb::WriteBatch batch;
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
     return db_->Write(default_write_options_, &batch);
   } else {
     return s;
@@ -517,11 +506,7 @@ Status Redis::GetSet(const Slice& key, const Slice& value, std::string* old_valu
   }
   StringsValue strings_value(value);
   rocksdb::WriteBatch batch;
-  char str[1];
-  EncodeFixed8(str, 'y');
-  StringMetaValue string_meta_value(Slice(str, 1));
-  batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-  batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+  batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
   return db_->Write(default_write_options_, &batch);
 }
 
@@ -561,12 +546,8 @@ Status Redis::Incrby(const Slice& key, int64_t value, int64_t* ret) {
     *ret = value;
     Int64ToStr(buf, 32, value);
     StringsValue strings_value(buf);
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
     rocksdb::WriteBatch batch;
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
     return db_->Write(default_write_options_, &batch);
   } else {
     return s;
@@ -613,11 +594,7 @@ Status Redis::Incrbyfloat(const Slice& key, const Slice& value, std::string* ret
     *ret = new_value;
     StringsValue strings_value(new_value);
     rocksdb::WriteBatch batch;
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
     return db_->Write(default_write_options_, &batch);
   } else {
     return s;
@@ -636,11 +613,7 @@ Status Redis::MSet(const std::vector<KeyValue>& kvs) {
   for (const auto& kv : kvs) {
     BaseKey base_key(kv.key);
     StringsValue strings_value(kv.value);
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
   }
   return db_->Write(default_write_options_, &batch);
 }
@@ -675,11 +648,7 @@ Status Redis::Set(const Slice& key, const Slice& value) {
   StringsValue strings_value(value);
   ScopeRecordLock l(lock_mgr_, key);
   BaseKey base_key(key);
-  char str[1];
-  EncodeFixed8(str, 'y');
-  StringMetaValue string_meta_value(Slice(str, 1));
-  batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-  batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+  batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
   return db_->Write(default_write_options_, &batch);
 }
 
@@ -691,14 +660,14 @@ rocksdb::Status Redis::Exists(const Slice& key) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       return SCard(key, &ret);
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       return ZCard(key, &ret);
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       return HLen(key, &ret);
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       return LLen(key, &llen);
     } else {
       return Get(key, &value);
@@ -712,14 +681,14 @@ rocksdb::Status Redis::Del(const Slice& key) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       return SetsDel(key);
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       return ZsetsDel(key);
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       return HashesDel(key);
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       return ListsDel(key);
     } else {
       return StringsDel(key);
@@ -733,14 +702,14 @@ rocksdb::Status Redis::Expire(const Slice& key, uint64_t ttl) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       return SetsExpire(key, ttl);
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       return ZsetsExpire(key, ttl);
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       return HashesExpire(key, ttl);
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       return ListsExpire(key, ttl);
     } else {
       return StringsExpire(key, ttl);
@@ -754,14 +723,14 @@ rocksdb::Status Redis::Expireat(const Slice& key, uint64_t ttl) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       return SetsExpireat(key, ttl);
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       return ZsetsExpireat(key, ttl);
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       return HashesExpireat(key, ttl);
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       return ListsExpireat(key, ttl);
     } else {
       return StringsExpireat(key, ttl);
@@ -769,6 +738,7 @@ rocksdb::Status Redis::Expireat(const Slice& key, uint64_t ttl) {
   }
   return rocksdb::Status::NotFound();
 }
+
 Status Redis::Setxx(const Slice& key, const Slice& value, int32_t* ret, const uint64_t ttl) {
   bool not_found = true;
   std::string old_value;
@@ -796,11 +766,7 @@ Status Redis::Setxx(const Slice& key, const Slice& value, int32_t* ret, const ui
       strings_value.SetRelativeTimestamp(ttl);
     }
     rocksdb::WriteBatch batch;
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
     return db_->Write(default_write_options_, &batch);
   }
 }
@@ -849,11 +815,7 @@ Status Redis::SetBit(const Slice& key, int64_t offset, int32_t on, int32_t* ret)
     StringsValue strings_value(data_value);
     strings_value.SetEtime(timestamp);
     rocksdb::WriteBatch batch;
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
     return db_->Write(default_write_options_, &batch);
   } else {
     return s;
@@ -873,11 +835,7 @@ Status Redis::Setex(const Slice& key, const Slice& value, uint64_t ttl) {
   BaseKey base_key(key);
   ScopeRecordLock l(lock_mgr_, key);
   rocksdb::WriteBatch batch;
-  char str[1];
-  EncodeFixed8(str, 'y');
-  StringMetaValue string_meta_value(Slice(str, 1));
-  batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-  batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+  batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
   return db_->Write(default_write_options_, &batch);
 }
 
@@ -906,11 +864,7 @@ Status Redis::Setnx(const Slice& key, const Slice& value, int32_t* ret, const ui
       strings_value.SetRelativeTimestamp(ttl);
     }
     rocksdb::WriteBatch batch;
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
     db_->Write(default_write_options_, &batch);
     if (s.ok()) {
       *ret = 1;
@@ -969,11 +923,7 @@ Status Redis::Delvx(const Slice& key, const Slice& value, int32_t* ret) {
       if (value.compare(parsed_strings_value.UserValue()) == 0) {
         *ret = 1;
         rocksdb::WriteBatch batch;
-        char str[1];
-        EncodeFixed8(str, 'y');
-        StringMetaValue string_meta_value(Slice(str, 1));
-        batch.Delete(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-        batch.Delete(handles_[kStringsCF], base_key.Encode());
+        batch.Delete(handles_[kMetaCF], base_key.Encode());
         return db_->Write(default_write_options_, &batch);
       } else {
         *ret = -1;
@@ -1028,11 +978,7 @@ Status Redis::Setrange(const Slice& key, int64_t start_offset, const Slice& valu
     *ret = static_cast<int32_t>(new_value.length());
     StringsValue strings_value(new_value);
     rocksdb::WriteBatch batch;
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
     return db_->Write(default_write_options_, &batch);
   }
   return s;
@@ -1249,11 +1195,7 @@ Status Redis::PKSetexAt(const Slice& key, const Slice& value, uint64_t timestamp
   ScopeRecordLock l(lock_mgr_, key);
   strings_value.SetEtime(uint64_t(timestamp));
   rocksdb::WriteBatch batch;
-  char str[1];
-  EncodeFixed8(str, 'y');
-  StringMetaValue string_meta_value(Slice(str, 1));
-  batch.Put(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-  batch.Put(handles_[kStringsCF], base_key.Encode(), strings_value.Encode());
+  batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
   return db_->Write(default_write_options_, &batch);
 }
 
@@ -1273,11 +1215,7 @@ Status Redis::StringsExpire(const Slice& key, uint64_t ttl) {
       return db_->Put(default_write_options_, base_key.Encode(), value);
     } else {
       rocksdb::WriteBatch batch;
-      char str[1];
-      EncodeFixed8(str, 'y');
-      StringMetaValue string_meta_value(Slice(str, 1));
-      batch.Delete(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-      batch.Delete(handles_[kStringsCF], base_key.Encode());
+      batch.Delete(handles_[kMetaCF], base_key.Encode());
       return db_->Write(default_write_options_, &batch);
     }
   }
@@ -1296,11 +1234,7 @@ Status Redis::StringsDel(const Slice& key) {
       return Status::NotFound("Stale");
     }
     rocksdb::WriteBatch batch;
-    char str[1];
-    EncodeFixed8(str, 'y');
-    StringMetaValue string_meta_value(Slice(str, 1));
-    batch.Delete(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-    batch.Delete(handles_[kStringsCF], base_key.Encode());
+    batch.Delete(handles_[kMetaCF], base_key.Encode());
     return db_->Write(default_write_options_, &batch);
   }
   return s;
@@ -1322,11 +1256,7 @@ Status Redis::StringsExpireat(const Slice& key, uint64_t timestamp) {
         return db_->Put(default_write_options_, base_key.Encode(), value);
       } else {
         rocksdb::WriteBatch batch;
-        char str[1];
-        EncodeFixed8(str, 'y');
-        StringMetaValue string_meta_value(Slice(str, 1));
-        batch.Delete(handles_[kMetaCF], base_key.Encode(), string_meta_value.Encode());
-        batch.Delete(handles_[kStringsCF], base_key.Encode());
+        batch.Delete(handles_[kMetaCF], base_key.Encode());
         return db_->Write(default_write_options_, &batch);
       }
     }
@@ -1339,19 +1269,17 @@ rocksdb::Status Redis::Persist(const Slice& key) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       return SetsPersist(key);
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       return ZsetsPersist(key);
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       return HashesPersist(key);
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       return ListsPersist(key);
-    } else if (type == "y") {
-      return StringsPersist(key);
     } else {
-      return rocksdb::Status::NotFound();
+      return StringsPersist(key);
     }
   }
   return rocksdb::Status::NotFound();
@@ -1362,14 +1290,14 @@ rocksdb::Status Redis::TTL(const Slice& key, uint64_t* timestamp) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       return SetsTTL(key, timestamp);
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       return ZsetsTTL(key, timestamp);
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       return HashesTTL(key, timestamp);
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       return ListsTTL(key, timestamp);
     } else {
       return StringsTTL(key, timestamp);
@@ -1383,19 +1311,17 @@ rocksdb::Status Redis::GetType(const storage::Slice& key, std::string& types) {
   BaseMetaKey base_meta_key(key);
   rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    Slice type = Slice(meta_value.data(), TYPE_SIZE);
-    if (type == "s") {
+    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type == Type::kSet) {
       types = "set";
-    } else if (type == "z") {
+    } else if (type == Type::kZset) {
       types = "zset";
-    } else if (type == "h") {
+    } else if (type == Type::kHash) {
       types = "hash";
-    } else if (type == "l") {
+    } else if (type == Type::kList) {
       types = "list";
-    } else if (type == "y") {
-      types = "string";
     } else {
-      types = "none";
+      types = "string";
     }
     return Status::OK();
   }
