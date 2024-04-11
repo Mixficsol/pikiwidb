@@ -107,6 +107,8 @@ enum class ClientState {
   kClosed,
 };
 
+constexpr const char* ErrTypeMessage = "Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value";
+
 class DB;
 struct PSlaveInfo;
 

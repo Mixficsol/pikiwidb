@@ -40,7 +40,7 @@ void HSetCmd::DoCmd(PClient* client) {
     s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->HSet(client->Key(), field, value, &temp);
     if (s.ok()) {
       ret += temp;
-    } else if (s.IsInvalidArgument()) {
+    } else if (s.ToString() == ErrTypeMessage) {
       client->SetRes(CmdRes::kmultikey);
       return;
     } else {
