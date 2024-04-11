@@ -328,6 +328,8 @@ class Redis {
       case 'z':
         return new ZsetsIterator(options, db_, handles_[kMetaCF], pattern);
         break;
+      case 'a':
+        return new AllIterator(options, db_, handles_[kMetaCF], pattern);
       default:
         WARN("Invalid datatype to create iterator");
         return nullptr;
