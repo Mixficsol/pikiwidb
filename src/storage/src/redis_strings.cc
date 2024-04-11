@@ -13,7 +13,6 @@
 #include "src/redis.h"
 #include "src/scope_record_lock.h"
 #include "src/scope_snapshot.h"
-#include "src/strings_filter.h"
 #include "storage/util.h"
 
 namespace storage {

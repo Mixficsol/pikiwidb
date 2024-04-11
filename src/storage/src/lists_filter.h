@@ -12,52 +12,10 @@
 
 #include "rocksdb/compaction_filter.h"
 #include "rocksdb/db.h"
-#include "src/debug.h"
 #include "src/lists_data_key_format.h"
 #include "src/lists_meta_value_format.h"
 
 namespace storage {
-
-class ListsMetaFilter : public rocksdb::CompactionFilter {
- public:
-  ListsMetaFilter() = default;
-  bool Filter(int level, const rocksdb::Slice& key, const rocksdb::Slice& value, std::string* new_value,
-              bool* value_changed) const override {
-    int64_t unix_time;
-    rocksdb::Env::Default()->GetCurrentTime(&unix_time);
-    auto cur_time = static_cast<int32_t>(unix_time);
-    ParsedListsMetaValue parsed_lists_meta_value(value);
-    TRACE("==========================START==========================");
-    TRACE("[ListMetaFilter], key: %s, count = %llu, timestamp: %llu, cur_time: %d, version: %llu",
-          key.ToString().c_str(), parsed_lists_meta_value.Count(), parsed_lists_meta_value.Etime(), cur_time,
-          parsed_lists_meta_value.Version());
-
-    if (parsed_lists_meta_value.Etime() != 0 && parsed_lists_meta_value.Etime() < cur_time &&
-        parsed_lists_meta_value.Version() < cur_time) {
-      TRACE("Drop[Stale & version < cur_time]");
-      return true;
-    }
-    if (parsed_lists_meta_value.Count() == 0 && parsed_lists_meta_value.Version() < cur_time) {
-      TRACE("Drop[Empty & version < cur_time]");
-      return true;
-    }
-    TRACE("Reserve");
-    return false;
-  }
-
-  const char* Name() const override { return "ListsMetaFilter"; }
-};
-
-class ListsMetaFilterFactory : public rocksdb::CompactionFilterFactory {
- public:
-  ListsMetaFilterFactory() = default;
-  std::unique_ptr<rocksdb::CompactionFilter> CreateCompactionFilter(
-      const rocksdb::CompactionFilter::Context& context) override {
-    return std::unique_ptr<rocksdb::CompactionFilter>(new ListsMetaFilter());
-  }
-  const char* Name() const override { return "ListsMetaFilterFactory"; }
-};
-
 class ListsDataFilter : public rocksdb::CompactionFilter {
  public:
   ListsDataFilter(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>* cf_handles_ptr, int meta_cf_index)
@@ -70,8 +28,8 @@ class ListsDataFilter : public rocksdb::CompactionFilter {
     UNUSED(new_value);
     UNUSED(value_changed);
     ParsedListsDataKey parsed_lists_data_key(key);
-    TRACE("==========================START==========================");
-    TRACE("[DataFilter], key: %s, index = %llu, data = %s, version = %llu",
+    DEBUG("==========================START==========================");
+    DEBUG("[DataFilter], key: %s, index = %llu, data = %s, version = %llu",
           parsed_lists_data_key.key().ToString().c_str(), parsed_lists_data_key.index(), value.ToString().c_str(),
           parsed_lists_data_key.Version());
 
@@ -98,28 +56,28 @@ class ListsDataFilter : public rocksdb::CompactionFilter {
         meta_not_found_ = true;
       } else {
         cur_key_ = "";
-        TRACE("Reserve[Get meta_key faild]");
+        DEBUG("Reserve[Get meta_key faild]");
         return false;
       }
     }
 
     if (meta_not_found_) {
-      TRACE("Drop[Meta key not exist]");
+      DEBUG("Drop[Meta key not exist]");
       return true;
     }
 
     int64_t unix_time;
     rocksdb::Env::Default()->GetCurrentTime(&unix_time);
     if (cur_meta_etime_ != 0 && cur_meta_etime_ < static_cast<uint64_t>(unix_time)) {
-      TRACE("Drop[Timeout]");
+      DEBUG("Drop[Timeout]");
       return true;
     }
 
     if (cur_meta_version_ > parsed_lists_data_key.Version()) {
-      TRACE("Drop[list_data_key_version < cur_meta_version]");
+      DEBUG("Drop[list_data_key_version < cur_meta_version]");
       return true;
     } else {
-      TRACE("Reserve[list_data_key_version == cur_meta_version]");
+      DEBUG("Reserve[list_data_key_version == cur_meta_version]");
       return false;
     }
   }

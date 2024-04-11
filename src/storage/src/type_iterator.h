@@ -18,7 +18,6 @@
 #include "src/base_data_key_format.h"
 #include "src/base_key_format.h"
 #include "src/base_meta_value_format.h"
-#include "src/debug.h"
 #include "src/lists_meta_value_format.h"
 #include "src/mutex.h"
 #include "src/strings_value_format.h"

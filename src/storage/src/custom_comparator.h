@@ -9,7 +9,6 @@
 #include "rocksdb/comparator.h"
 
 #include "src/coding.h"
-#include "src/debug.h"
 #include "storage/storage_define.h"
 
 namespace storage {
@@ -67,8 +66,6 @@ class ListsDataKeyComparatorImpl : public rocksdb::Comparator {
 
     uint64_t index_a = DecodeFixed64(ptr_a);
     uint64_t index_b = DecodeFixed64(ptr_b);
-    ptr_a += sizeof(uint64_t);
-    ptr_b += sizeof(uint64_t);
     if (index_a != index_b) {
       return index_a < index_b ? -1 : 1;
     } else {
@@ -84,8 +81,8 @@ class ListsDataKeyComparatorImpl : public rocksdb::Comparator {
 };
 
 /* zset score key pattern
- *  | <Reserve 1> |      <Key>      |  <Version>  |  <Score>  | <Member> | <Reserve2> |
- *  |   8 Bytes   |  Key Size Bytes |   8 Bytes   |  8 Bytes  |          |     16B    |
+ *  | Reserve 1 |      Key     |  Version  |  Score> | Member | Reserve2 |
+ *  |  8 Bytes  |Key Size Bytes|  8 Bytes  | 8 Bytes |        |    16B   |
  */
 class ZSetsScoreKeyComparatorImpl : public rocksdb::Comparator {
  public:

@@ -11,6 +11,7 @@ TARGET_INCLUDE_DIRECTORIES(storage
         PUBLIC ${CMAKE_SOURCE_DIR}/src
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+        PUBLIC ${CMAKE_SOURCE_DIR}/src/pstd
         PRIVATE ${rocksdb_SOURCE_DIR}
         PRIVATE ${rocksdb_SOURCE_DIR}/include
         )
