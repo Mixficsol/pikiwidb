@@ -12,8 +12,6 @@
 
 #include "rocksdb/slice.h"
 
-#include "src/debug.h"
-
 namespace storage {
 using Slice = rocksdb::Slice;
 
@@ -89,7 +87,7 @@ inline const char* DecodeUserKey(const char* ptr, int length, std::string* user_
   for (int idx = 0; idx < length; idx++) {
     switch (ptr[idx]) {
       case '\u0000': {
-        delim_found = zero_ahead ? true : false;
+        delim_found = zero_ahead;
         zero_ahead = true;
         break;
       }

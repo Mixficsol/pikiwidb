@@ -17,7 +17,6 @@
 #include "pstd/env.h"
 #include "pstd/log.h"
 #include "src/custom_comparator.h"
-#include "src/debug.h"
 #include "src/lock_mgr.h"
 #include "src/lru_cache.h"
 #include "src/mutex_impl.h"

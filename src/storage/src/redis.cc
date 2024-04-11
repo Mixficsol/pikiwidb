@@ -11,7 +11,6 @@
 #include "src/base_filter.h"
 #include "src/lists_filter.h"
 #include "src/redis.h"
-#include "src/strings_filter.h"
 #include "src/zsets_filter.h"
 
 namespace storage {
@@ -62,14 +61,14 @@ Status Redis::Open(const StorageOptions& storage_options, const std::string& db_
   db_ops.create_missing_column_families = true;
 
   // meta & string column-family options
-  rocksdb::ColumnFamilyOptions string_cf_ops(storage_options.options);
+  rocksdb::ColumnFamilyOptions meta_cf_ops(storage_options.options);
   // TODO change compaction filter
-  string_cf_ops.compaction_filter_factory = std::make_shared<StringsFilterFactory>();
-  rocksdb::BlockBasedTableOptions string_table_ops(table_ops);
+  meta_cf_ops.compaction_filter_factory = std::make_shared<MetaFilterFactory>();
+  rocksdb::BlockBasedTableOptions meta_table_ops(table_ops);
   if (!storage_options.share_block_cache && (storage_options.block_cache_size > 0)) {
-    string_table_ops.block_cache = rocksdb::NewLRUCache(storage_options.block_cache_size);
+    meta_table_ops.block_cache = rocksdb::NewLRUCache(storage_options.block_cache_size);
   }
-  string_cf_ops.table_factory.reset(rocksdb::NewBlockBasedTableFactory(string_table_ops));
+  meta_cf_ops.table_factory.reset(rocksdb::NewBlockBasedTableFactory(meta_table_ops));
 
   // hash column-family options
   rocksdb::ColumnFamilyOptions hash_data_cf_ops(storage_options.options);
@@ -116,7 +115,7 @@ Status Redis::Open(const StorageOptions& storage_options, const std::string& db_
 
   std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
   // meta & string cf
-  column_families.emplace_back(rocksdb::kDefaultColumnFamilyName, string_cf_ops);
+  column_families.emplace_back(rocksdb::kDefaultColumnFamilyName, meta_cf_ops);
   // hash CF
   column_families.emplace_back("hash_data_cf", hash_data_cf_ops);
   // set CF

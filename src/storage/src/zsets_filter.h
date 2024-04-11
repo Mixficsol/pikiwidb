@@ -30,8 +30,8 @@ class ZSetsScoreFilter : public rocksdb::CompactionFilter {
     UNUSED(new_value);
     UNUSED(value_changed);
     ParsedZSetsScoreKey parsed_zsets_score_key(key);
-    TRACE("==========================START==========================");
-    TRACE("[ScoreFilter], key: %s, score = %lf, member = %s, version = %lld",
+    DEBUG("==========================START==========================");
+    DEBUG("[ScoreFilter], key: %s, score = %lf, member = %s, version = %lld",
           parsed_zsets_score_key.key().ToString().c_str(), parsed_zsets_score_key.score(),
           parsed_zsets_score_key.member().ToString().c_str(), parsed_zsets_score_key.Version());
 
@@ -58,27 +58,27 @@ class ZSetsScoreFilter : public rocksdb::CompactionFilter {
         meta_not_found_ = true;
       } else {
         cur_key_ = "";
-        TRACE("Reserve[Get meta_key faild]");
+        DEBUG("Reserve[Get meta_key faild]");
         return false;
       }
     }
 
     if (meta_not_found_) {
-      TRACE("Drop[Meta key not exist]");
+      DEBUG("Drop[Meta key not exist]");
       return true;
     }
 
     int64_t unix_time;
     rocksdb::Env::Default()->GetCurrentTime(&unix_time);
     if (cur_meta_etime_ != 0 && cur_meta_etime_ < static_cast<uint64_t>(unix_time)) {
-      TRACE("Drop[Timeout]");
+      DEBUG("Drop[Timeout]");
       return true;
     }
     if (cur_meta_version_ > parsed_zsets_score_key.Version()) {
-      TRACE("Drop[score_key_version < cur_meta_version]");
+      DEBUG("Drop[score_key_version < cur_meta_version]");
       return true;
     } else {
-      TRACE("Reserve[score_key_version == cur_meta_version]");
+      DEBUG("Reserve[score_key_version == cur_meta_version]");
       return false;
     }
   }
