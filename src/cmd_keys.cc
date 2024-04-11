@@ -130,7 +130,6 @@ bool PersistCmd::DoInitial(PClient* client) {
 }
 
 void PersistCmd::DoCmd(PClient* client) {
-  std::map<storage::DataType, storage::Status> type_status;
   auto res = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->Persist(client->Key());
   client->AppendInteger(res);
 }

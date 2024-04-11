@@ -1440,15 +1440,7 @@ Status Storage::GetType(const std::string& key, std::string& types) {
 Status Storage::Keys(const DataType& data_type, const std::string& pattern, std::vector<std::string>* keys) {
   keys->clear();
   std::vector<DataType> types;
-  if (data_type == DataType::kAll) {
-    types.push_back(DataType::kStrings);
-    types.push_back(DataType::kHashes);
-    types.push_back(DataType::kLists);
-    types.push_back(DataType::kZSets);
-    types.push_back(DataType::kSets);
-  } else {
-    types.push_back(data_type);
-  }
+  types.push_back(data_type);
 
   for (const auto& type : types) {
     std::vector<IterSptr> inst_iters;

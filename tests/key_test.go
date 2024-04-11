@@ -208,7 +208,8 @@ var _ = Describe("Keyspace", Ordered, func() {
 		time.Sleep(2 * time.Second)
 	})
 
-	PIt("keys", func() {
+	It("keys", func() {
+		Expect(client.Del(ctx, "a1", "k1", "k2", "k3", "k4", "k5", "key").Err()).NotTo(HaveOccurred())
 		// empty
 		Expect(client.Keys(ctx, "*").Val()).To(Equal([]string{}))
 		Expect(client.Keys(ctx, "dummy").Val()).To(Equal([]string{}))
@@ -222,10 +223,10 @@ var _ = Describe("Keyspace", Ordered, func() {
 		Expect(client.ZAdd(ctx, "k5", redis.Z{Score: 1, Member: "v5"}).Val()).To(Equal(int64(1)))
 
 		// all
-		Expect(client.Keys(ctx, "*").Val()).To(Equal([]string{"a1", "k1", "k3", "k4", "k5", "k2"}))
+		Expect(client.Keys(ctx, "*").Val()).To(Equal([]string{"a1", "k1", "k2", "k3", "k4", "k5"}))
 
 		// pattern
-		Expect(client.Keys(ctx, "k*").Val()).To(Equal([]string{"k1", "k3", "k4", "k5", "k2"}))
+		Expect(client.Keys(ctx, "k*").Val()).To(Equal([]string{"k1", "k2", "k3", "k4", "k5"}))
 		Expect(client.Keys(ctx, "k1").Val()).To(Equal([]string{"k1"}))
 
 		// del keys
