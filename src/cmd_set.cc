@@ -42,7 +42,7 @@ void SAddCmd::DoCmd(PClient* client) {
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SAdd(client->Key(), members, &ret);
   if (s.ok()) {
     client->AppendInteger(ret);
-  } else if (s.IsInvalidArgument()) {
+  } else if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kSyntaxErr, "sadd cmd error");
@@ -69,7 +69,7 @@ void SUnionStoreCmd::DoCmd(PClient* client) {
   if (!s.ok()) {
     client->SetRes(CmdRes::kSyntaxErr, "sunionstore cmd error");
   }
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
   }
   client->AppendInteger(ret);
@@ -91,7 +91,7 @@ void SInterCmd::DoCmd(PClient* client) {
     client->SetRes(CmdRes::kErrOther, "sinter cmd error");
     return;
   }
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
   }
   client->AppendStringVector(res_vt);
@@ -113,7 +113,7 @@ void SRemCmd::DoCmd(PClient* client) {
   if (!s.ok()) {
     client->SetRes(CmdRes::kErrOther, "srem cmd error");
   }
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
   }
   client->AppendInteger(reply_num);
@@ -134,7 +134,7 @@ void SUnionCmd::DoCmd(PClient* client) {
   if (!s.ok()) {
     client->SetRes(CmdRes::kErrOther, "sunion cmd error");
   }
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
   }
   client->AppendStringVector(res_vt);
@@ -156,7 +156,7 @@ void SInterStoreCmd::DoCmd(PClient* client) {
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())
                           ->GetStorage()
                           ->SInterstore(client->Key(), inter_keys, value_to_dest, &reply_num);
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
     return;
   }
@@ -177,7 +177,7 @@ bool SCardCmd::DoInitial(PClient* client) {
 void SCardCmd::DoCmd(PClient* client) {
   int32_t reply_Num = 0;
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SCard(client->Key(), &reply_Num);
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
     return;
   }
@@ -198,7 +198,7 @@ void SMoveCmd::DoCmd(PClient* client) {
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())
                           ->GetStorage()
                           ->SMove(client->argv_[1], client->argv_[2], client->argv_[3], &reply_num);
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
     return;
   }
@@ -231,7 +231,7 @@ void SRandMemberCmd::DoCmd(PClient* client) {
   std::vector<std::string> vec_ret;
   storage::Status s =
       PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SRandmember(client->Key(), this->num_rand, &vec_ret);
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
     return;
   }
@@ -300,7 +300,7 @@ bool SMembersCmd::DoInitial(PClient* client) {
 void SMembersCmd::DoCmd(PClient* client) {
   std::vector<std::string> delete_members;
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SMembers(client->Key(), &delete_members);
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
     return;
   }
@@ -323,7 +323,7 @@ void SDiffCmd::DoCmd(PClient* client) {
   std::vector<std::string> diff_members;
   std::vector<std::string> diff_keys(client->argv_.begin() + 1, client->argv_.end());
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SDiff(diff_keys, &diff_members);
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
     return;
   }
@@ -349,7 +349,7 @@ void SDiffstoreCmd::DoCmd(PClient* client) {
   storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())
                           ->GetStorage()
                           ->SDiffstore(client->Key(), diffstore_keys, value_to_dest, &reply_num);
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
     return;
   }

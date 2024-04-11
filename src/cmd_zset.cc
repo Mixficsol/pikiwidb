@@ -112,7 +112,7 @@ void ZAddCmd::DoCmd(PClient* client) {
       PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->ZAdd(client->Key(), score_members_, &count);
   if (s.ok()) {
     client->AppendInteger(count);
-  } else if (s.IsInvalidArgument()) {
+  } else if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
@@ -170,7 +170,7 @@ void ZRevrangeCmd::DoCmd(PClient* client) {
         client->AppendContent(sm.member);
       }
     }
-  } else if (s.IsInvalidArgument()) {
+  } else if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
   } else {
     client->SetRes(CmdRes::kErrOther, s.ToString());
@@ -232,7 +232,7 @@ void ZRangebyscoreCmd::DoCmd(PClient* client) {
                           ->GetStorage()
                           ->ZRangebyscore(client->Key(), min_score, max_score, left_close, right_close, &score_members);
 
-  if (s.IsInvalidArgument()) {
+  if (s.ToString() == ErrTypeMessage) {
     client->SetRes(CmdRes::kmultikey);
     return;
   }
