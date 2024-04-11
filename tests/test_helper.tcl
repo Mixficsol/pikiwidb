@@ -25,9 +25,9 @@ set ::all_tests {
    # unit/hyperloglog
    # unit/type
    # unit/acl
-   unit/type/list-2
-   # unit/type/list-3
-   # unit/type/set
+   # unit/type/list-2
+    # unit/type/list-3
+    # unit/type/set
     # unit/type/zset
     # unit/type/string
     # unit/type/hash
@@ -136,7 +136,7 @@ proc reconnect {args} {
 
     # select the right db when we don't have to authenticate
     if {![dict exists $config "requirepass"]} {
-        $client select 9
+        # $client select 9
     }
 
     # re-set $srv in the servers list
