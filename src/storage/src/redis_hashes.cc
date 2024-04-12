@@ -139,7 +139,8 @@ Status Redis::HDel(const Slice& key, const std::vector<std::string>& fields, int
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
     ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
@@ -195,10 +196,12 @@ Status Redis::HGet(const Slice& key, const Slice& field, std::string* value) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       return Status::NotFound("Stale");
     } else if (parsed_hashes_meta_value.Count() == 0) {
@@ -228,10 +231,11 @@ Status Redis::HGetall(const Slice& key, std::vector<FieldValue>* fvs) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
     if (parsed_hashes_meta_value.IsStale()) {
       return Status::NotFound("Stale");
     } else if (parsed_hashes_meta_value.Count() == 0) {
@@ -264,10 +268,12 @@ Status Redis::HGetallWithTTL(const Slice& key, std::vector<FieldValue>* fvs, uin
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.Count() == 0) {
       return Status::NotFound();
     } else if (parsed_hashes_meta_value.IsStale()) {
@@ -314,10 +320,12 @@ Status Redis::HIncrby(const Slice& key, const Slice& field, int64_t value, int64
   char value_buf[32] = {0};
   char meta_value_buf[4] = {0};
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
       version = parsed_hashes_meta_value.UpdateVersion();
       parsed_hashes_meta_value.SetCount(1);
@@ -398,10 +406,12 @@ Status Redis::HIncrbyfloat(const Slice& key, const Slice& field, const Slice& by
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   char meta_value_buf[4] = {0};
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
       version = parsed_hashes_meta_value.UpdateVersion();
       parsed_hashes_meta_value.SetCount(1);
@@ -475,10 +485,12 @@ Status Redis::HKeys(const Slice& key, std::vector<std::string>* fields) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       return Status::NotFound("Stale");
     } else if (parsed_hashes_meta_value.Count() == 0) {
@@ -506,10 +518,12 @@ Status Redis::HLen(const Slice& key, int32_t* ret) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       *ret = 0;
       return Status::NotFound("Stale");
@@ -538,10 +552,12 @@ Status Redis::HMGet(const Slice& key, const std::vector<std::string>& fields, st
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if ((is_stale = parsed_hashes_meta_value.IsStale()) || parsed_hashes_meta_value.Count() == 0) {
       for (size_t idx = 0; idx < fields.size(); ++idx) {
         vss->push_back({std::string(), Status::NotFound()});
@@ -595,10 +611,12 @@ Status Redis::HMSet(const Slice& key, const std::vector<FieldValue>& fvs) {
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   char meta_value_buf[4] = {0};
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
       version = parsed_hashes_meta_value.InitialMetaValue();
       if (!parsed_hashes_meta_value.check_set_count(static_cast<int32_t>(filtered_fvs.size()))) {
@@ -663,10 +681,12 @@ Status Redis::HSet(const Slice& key, const Slice& field, const Slice& value, int
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   char meta_value_buf[4] = {0};
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
@@ -734,10 +754,12 @@ Status Redis::HSetnx(const Slice& key, const Slice& field, const Slice& value, i
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   char meta_value_buf[4] = {0};
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
       version = parsed_hashes_meta_value.InitialMetaValue();
       parsed_hashes_meta_value.SetCount(1);
@@ -790,10 +812,12 @@ Status Redis::HVals(const Slice& key, std::vector<std::string>* values) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       return Status::NotFound("Stale");
     } else if (parsed_hashes_meta_value.Count() == 0) {
@@ -846,10 +870,12 @@ Status Redis::HScan(const Slice& key, int64_t cursor, const std::string& pattern
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
       *next_cursor = 0;
       return Status::NotFound();
@@ -916,10 +942,12 @@ Status Redis::HScanx(const Slice& key, const std::string& start_field, const std
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
       *next_field = "";
       return Status::NotFound();
@@ -1055,10 +1083,12 @@ Status Redis::PKHScanRange(const Slice& key, const Slice& field_start, const std
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
       return Status::NotFound();
     } else {
@@ -1119,10 +1149,12 @@ Status Redis::PKHRScanRange(const Slice& key, const Slice& field_start, const st
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(read_options, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale() || parsed_hashes_meta_value.Count() == 0) {
       return Status::NotFound();
     } else {
@@ -1169,10 +1201,12 @@ Status Redis::HashesExpire(const Slice& key, uint64_t ttl) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       return Status::NotFound("Stale");
     } else if (parsed_hashes_meta_value.Count() == 0) {
@@ -1197,10 +1231,12 @@ Status Redis::HashesDel(const Slice& key) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       return Status::NotFound("Stale");
     } else if (parsed_hashes_meta_value.Count() == 0) {
@@ -1222,10 +1258,12 @@ Status Redis::HashesExpireat(const Slice& key, uint64_t timestamp) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       return Status::NotFound("Stale");
     } else if (parsed_hashes_meta_value.Count() == 0) {
@@ -1249,10 +1287,12 @@ Status Redis::HashesPersist(const Slice& key) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       return Status::NotFound("Stale");
     } else if (parsed_hashes_meta_value.Count() == 0) {
@@ -1276,10 +1316,12 @@ Status Redis::HashesTTL(const Slice& key, uint64_t* timestamp) {
   BaseMetaKey base_meta_key(key);
   Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
   if (s.ok()) {
-    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
-    if (!parsed_hashes_meta_value.IsSameType(Type::kHash)) {
+    auto type = static_cast<enum Type>(static_cast<uint8_t>(meta_value[0]));
+    if (type != Type::kHash) {
       return Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
     }
+    ParsedHashesMetaValue parsed_hashes_meta_value(&meta_value);
+
     if (parsed_hashes_meta_value.IsStale()) {
       *timestamp = -2;
       return Status::NotFound("Stale");

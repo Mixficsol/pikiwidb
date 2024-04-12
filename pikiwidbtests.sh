@@ -2,8 +2,8 @@
 
 # clear the log file
 function cleanup() {
-    rm -rf ./log[0-9]*
-    rm -rf ./db[0-9]*
+    rm -rf ./logs*
+    rm -rf ./db*
     rm -rf dbsync/
     rm src/redis-server
 }
@@ -56,6 +56,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-#if [ "$2" == "clean" ];
-#   cleanup
-#fi
+# You can use './pikiwidb.sh all clean 'to ensure that the
+# data can be deleted immediately after the test
+if [ "$2" == "clean" ]; then
+   cleanup
+fi

@@ -54,6 +54,61 @@ void ExistsCmd::DoCmd(PClient* client) {
   }
 }
 
+TypeCmd::TypeCmd(const std::string& name, int16_t arity)
+    : BaseCmd(name, arity, kCmdFlagsReadonly, kAclCategoryRead | kAclCategoryKeyspace) {}
+
+bool TypeCmd::DoInitial(PClient* client) {
+  client->SetKey(client->argv_[1]);
+  return true;
+}
+
+void TypeCmd::DoCmd(PClient* client) {
+  std::string types;
+  rocksdb::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->GetType(client->Key(), types);
+  if (s.ok()) {
+    client->AppendContent("+" + types);
+  } else {
+    client->SetRes(CmdRes::kErrOther, s.ToString());
+  }
+}
+
+ExpireCmd::ExpireCmd(const std::string& name, int16_t arity)
+    : BaseCmd(name, arity, kCmdFlagsWrite, kAclCategoryWrite | kAclCategoryKeyspace) {}
+
+bool ExpireCmd::DoInitial(PClient* client) {
+  client->SetKey(client->argv_[1]);
+  return true;
+}
+
+void ExpireCmd::DoCmd(PClient* client) {
+  uint64_t sec = 0;
+  if (pstd::String2int(client->argv_[2], &sec) == 0) {
+    client->SetRes(CmdRes ::kInvalidInt);
+    return;
+  }
+  auto res = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->Expire(client->Key(), sec);
+  if (res != -1) {
+    client->AppendInteger(res);
+  } else {
+    client->SetRes(CmdRes::kErrOther, "expire internal error");
+  }
+}
+
+TtlCmd::TtlCmd(const std::string& name, int16_t arity)
+    : BaseCmd(name, arity, kCmdFlagsReadonly, kAclCategoryRead | kAclCategoryKeyspace) {}
+
+bool TtlCmd::DoInitial(PClient* client) {
+  client->SetKey(client->argv_[1]);
+  return true;
+}
+
+void TtlCmd::DoCmd(PClient* client) {
+  int64_t type_timestamp;
+  std::map<storage::DataType, rocksdb::Status> type_status;
+  type_timestamp = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->TTL(client->Key());
+  client->AppendInteger(type_timestamp);
+}
+
 PExpireCmd::PExpireCmd(const std::string& name, int16_t arity)
     : BaseCmd(name, arity, kCmdFlagsWrite, kAclCategoryWrite | kAclCategoryKeyspace) {}
 
