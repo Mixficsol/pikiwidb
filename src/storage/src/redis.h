@@ -98,8 +98,7 @@ class Redis {
   // Common Commands
   Status Open(const StorageOptions& storage_options, const std::string& db_path);
 
-  virtual Status CompactRange(const DataType& option_type, const rocksdb::Slice* begin, const rocksdb::Slice* end,
-                              const ColumnFamilyType& type = kMetaAndData);
+  virtual Status CompactRange(const rocksdb::Slice* begin, const rocksdb::Slice* end, ColumnFamilyIndex column_family = ColumnFamilyIndex::kColumnFamilyNum);
 
   virtual Status GetProperty(const std::string& property, uint64_t* out);
 
@@ -314,22 +313,22 @@ class Redis {
     options.iterate_upper_bound = upper_bound;
     switch (type) {
       case 'k':
-        return new StringsIterator(options, db_, handles_[kMetaCF], pattern);
+        return new StringsIterator(options, db_, handles_[static_cast<uint8_t>(ColumnFamilyIndex::kMetaCF)], pattern);
         break;
       case 'h':
-        return new HashesIterator(options, db_, handles_[kMetaCF], pattern);
+        return new HashesIterator(options, db_, handles_[static_cast<uint8_t>(ColumnFamilyIndex::kMetaCF)], pattern);
         break;
       case 's':
-        return new SetsIterator(options, db_, handles_[kMetaCF], pattern);
+        return new SetsIterator(options, db_, handles_[static_cast<uint8_t>(ColumnFamilyIndex::kMetaCF)], pattern);
         break;
       case 'l':
-        return new ListsIterator(options, db_, handles_[kMetaCF], pattern);
+        return new ListsIterator(options, db_, handles_[static_cast<uint8_t>(ColumnFamilyIndex::kMetaCF)], pattern);
         break;
       case 'z':
-        return new ZsetsIterator(options, db_, handles_[kMetaCF], pattern);
+        return new ZsetsIterator(options, db_, handles_[static_cast<uint8_t>(ColumnFamilyIndex::kMetaCF)], pattern);
         break;
       case 'a':
-        return new AllIterator(options, db_, handles_[kMetaCF], pattern);
+        return new AllIterator(options, db_, handles_[static_cast<uint8_t>(ColumnFamilyIndex::kMetaCF)], pattern);
       default:
         WARN("Invalid datatype to create iterator");
         return nullptr;

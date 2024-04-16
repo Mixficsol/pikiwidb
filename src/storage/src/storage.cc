@@ -949,7 +949,7 @@ Status Storage::ZInterstore(const Slice& destination, const std::vector<std::str
   Status s;
   value_to_dest.clear();
 
-  Slice key = Slice(keys[0]);
+  auto key = Slice(keys[0]);
   auto& inst = GetDBInstance(key);
   std::map<std::string, double> member_to_score;
   double weight = weights.empty() ? 1 : weights[0];
@@ -958,7 +958,7 @@ Status Storage::ZInterstore(const Slice& destination, const std::vector<std::str
     return s;
   }
 
-  for (const auto member_score : member_to_score) {
+  for (const auto& member_score : member_to_score) {
     std::string member = member_score.first;
     double score = member_score.second;
     bool reliable = true;
@@ -1615,8 +1615,7 @@ Status Storage::StartBGThread() {
 
 Status Storage::AddBGTask(const BGTask& bg_task) {
   bg_tasks_mutex_.lock();
-  if (bg_task.type == kAll) {
-    // if current task it is global compact,
+  if (bg_task.operation == Operation::kCompactFull) {
     // clear the bg_tasks_queue_;
     std::queue<BGTask> empty_queue;
     bg_tasks_queue_.swap(empty_queue);
@@ -1643,35 +1642,32 @@ Status Storage::RunBGTask() {
       return Status::Incomplete("bgtask return with bg_tasks_should_exit true");
     }
 
-    if (task.operation == kCleanAll) {
-      DoCompactRange(task.type, "", "");
-    } else if (task.operation == kCompactRange) {
+    if (task.operation == Operation::kCompactFull) {
+      // compaction full .
+      DoCompactRange("", "");
+    } else if (task.operation == Operation::kCompactRange) {
       if (task.argv.size() == 1) {
-        DoCompactSpecificKey(task.type, task.argv[0]);
+        DoCompactSpecificKey(task.argv[0]);
       }
       if (task.argv.size() == 2) {
-        DoCompactRange(task.type, task.argv.front(), task.argv.back());
+        DoCompactRange(task.argv[0], task.argv[1]);
       }
     }
   }
   return Status::OK();
 }
 
-Status Storage::Compact(const DataType& type, bool sync) {
+Status Storage::Compact(bool sync) {
   if (sync) {
-    return DoCompactRange(type, "", "");
+    return DoCompactRange("", "");
   } else {
-    AddBGTask({type, kCleanAll});
+    AddBGTask({Operation::kCompactFull});
   }
   return Status::OK();
 }
 
 // run compactrange for all rocksdb instance
-Status Storage::DoCompactRange(const DataType& type, const std::string& start, const std::string& end) {
-  if (type != kAll && type != kStrings && type != kHashes && type != kSets && type != kZSets && type != kLists) {
-    return Status::InvalidArgument("");
-  }
-
+Status Storage::DoCompactRange(const std::string& start, const std::string& end) {
   std::string start_key, end_key;
   CalculateStartAndEndKey(start, &start_key, nullptr);
   CalculateStartAndEndKey(end, nullptr, &end_key);
@@ -1679,53 +1675,23 @@ Status Storage::DoCompactRange(const DataType& type, const std::string& start, c
   Slice slice_end_key(end_key);
   Slice* start_ptr = slice_start_key.empty() ? nullptr : &slice_start_key;
   Slice* end_ptr = slice_end_key.empty() ? nullptr : &slice_end_key;
-
   Status s;
   for (const auto& inst : insts_) {
-    switch (type) {
-      case DataType::kStrings:
-        current_task_type_ = Operation::kCleanStrings;
-        s = inst->CompactRange(type, start_ptr, end_ptr);
-        break;
-      case DataType::kHashes:
-        current_task_type_ = Operation::kCleanHashes;
-        s = inst->CompactRange(type, start_ptr, end_ptr);
-        break;
-      case DataType::kLists:
-        current_task_type_ = Operation::kCleanLists;
-        s = inst->CompactRange(type, start_ptr, end_ptr);
-        break;
-      case DataType::kSets:
-        current_task_type_ = Operation::kCleanSets;
-        s = inst->CompactRange(type, start_ptr, end_ptr);
-        break;
-      case DataType::kZSets:
-        current_task_type_ = Operation::kCleanZSets;
-        s = inst->CompactRange(type, start_ptr, end_ptr);
-        break;
-      default:
-        current_task_type_ = Operation::kCleanAll;
-        s = inst->CompactRange(DataType::kStrings, start_ptr, end_ptr);
-        s = inst->CompactRange(DataType::kHashes, start_ptr, end_ptr);
-        s = inst->CompactRange(DataType::kLists, start_ptr, end_ptr);
-        s = inst->CompactRange(DataType::kSets, start_ptr, end_ptr);
-        s = inst->CompactRange(DataType::kZSets, start_ptr, end_ptr);
-    }
+    s = inst->CompactRange(start_ptr, end_ptr);
   }
-  current_task_type_ = Operation::kNone;
   return s;
 }
 
-Status Storage::CompactRange(const DataType& type, const std::string& start, const std::string& end, bool sync) {
+Status Storage::CompactRange(const std::string& start, const std::string& end, bool sync) {
   if (sync) {
-    return DoCompactRange(type, start, end);
+    return DoCompactRange(start, end);
   } else {
-    AddBGTask({type, kCompactRange, {start, end}});
+    AddBGTask({kCompactRange, {start, end}});
   }
   return Status::OK();
 }
 
-Status Storage::DoCompactSpecificKey(const DataType& type, const std::string& key) {
+Status Storage::DoCompactSpecificKey(const std::string& key) {
   Status s;
   auto& inst = GetDBInstance(key);
 
@@ -1734,7 +1700,7 @@ Status Storage::DoCompactSpecificKey(const DataType& type, const std::string& ke
   CalculateStartAndEndKey(key, &start_key, &end_key);
   Slice slice_begin(start_key);
   Slice slice_end(end_key);
-  s = inst->CompactRange(type, &slice_begin, &slice_end, kMeta);
+  s = inst->CompactRange(&slice_begin, &slice_end);
   return s;
 }
 
@@ -1757,27 +1723,6 @@ Status Storage::SetSmallCompactionDurationThreshold(uint32_t small_compaction_du
     inst->SetSmallCompactionDurationThreshold(small_compaction_duration_threshold);
   }
   return Status::OK();
-}
-
-std::string Storage::GetCurrentTaskType() {
-  int type = current_task_type_;
-  switch (type) {
-    case kCleanAll:
-      return "All";
-    case kCleanStrings:
-      return "String";
-    case kCleanHashes:
-      return "Hash";
-    case kCleanZSets:
-      return "ZSet";
-    case kCleanSets:
-      return "Set";
-    case kCleanLists:
-      return "List";
-    case kNone:
-    default:
-      return "No";
-  }
 }
 
 Status Storage::GetUsage(const std::string& property, uint64_t* const result) {

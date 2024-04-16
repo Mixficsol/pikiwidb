@@ -72,18 +72,18 @@ struct KeyInfo {
   uint64_t keys = 0;
   uint64_t expires = 0;
   uint64_t avg_ttl = 0;
-  uint64_t invaild_keys = 0;
+  uint64_t invalid_keys = 0;
 
-  KeyInfo() : keys(0), expires(0), avg_ttl(0), invaild_keys(0) {}
+  KeyInfo() {}
 
-  KeyInfo(uint64_t k, uint64_t e, uint64_t a, uint64_t i) : keys(k), expires(e), avg_ttl(a), invaild_keys(i) {}
+  KeyInfo(uint64_t k, uint64_t e, uint64_t a, uint64_t i) : keys(k), expires(e), avg_ttl(a), invalid_keys(i) {}
 
   KeyInfo operator+(const KeyInfo& info) {
     KeyInfo res;
     res.keys = keys + info.keys;
     res.expires = expires + info.expires;
     res.avg_ttl = avg_ttl + info.avg_ttl;
-    res.invaild_keys = invaild_keys + info.invaild_keys;
+    res.invalid_keys = invalid_keys + info.invalid_keys;
     return res;
   }
 };
@@ -111,19 +111,14 @@ struct KeyVersion {
 };
 
 struct ScoreMember {
-  ScoreMember() : score(0.0), member("") {}
-  ScoreMember(double t_score, const std::string& t_member) : score(t_score), member(t_member) {}
-  double score;
+  ScoreMember() {}
+  ScoreMember(double t_score, std::string  t_member) : score(t_score), member(std::move(t_member)) {}
+  double score = 0.0;
   std::string member;
   bool operator==(const ScoreMember& sm) const { return (sm.score == score && sm.member == member); }
 };
 
 enum BeforeOrAfter { Before, After };
-
-enum DataType { kAll, kStrings, kHashes, kSets, kLists, kZSets };
-
-const std::string DataTypeToString[] = {"all", "string", "hash", "set", "list", "zset"};
-const char DataTypeTag[] = {'a', 'k', 'h', 's', 'l', 'z'};
 
 enum class OptionType {
   kDB,
@@ -136,25 +131,25 @@ enum AGGREGATE { SUM, MIN, MAX };
 
 enum BitOpType { kBitOpAnd = 1, kBitOpOr, kBitOpXor, kBitOpNot, kBitOpDefault };
 
-enum Operation {
+enum DataType { kAll, kStrings, kHashes, kSets, kLists, kZSets, kStreams };
+
+const char DataTypeTag[] = {'a', 'k', 'h', 's', 'l', 'z', 'x'};
+
+enum Operation : uint8_t {
   kNone = 0,
-  kCleanAll,
-  kCleanStrings,
-  kCleanHashes,
-  kCleanZSets,
-  kCleanSets,
-  kCleanLists,
-  kCompactRange
+  kCompactKey,
+  kCompactRange,
+  kCompactFull
 };
 
+// Describe a compact task
 struct BGTask {
-  DataType type;
   Operation operation;
   std::vector<std::string> argv;
 
-  BGTask(const DataType& _type = DataType::kAll, const Operation& _opeation = Operation::kNone,
-         const std::vector<std::string>& _argv = {})
-      : type(_type), operation(_opeation), argv(_argv) {}
+  BGTask(const Operation& operation = Operation::kCompactFull,
+         const std::vector<std::string>& argv = {})
+      : operation(operation), argv(argv) {}
 };
 
 class Storage {
@@ -164,8 +159,10 @@ class Storage {
 
   Status Open(const StorageOptions& storage_options, const std::string& db_path);
 
+  // 之后重写.
   Status LoadCursorStartKey(const DataType& dtype, int64_t cursor, char* type, std::string* start_key);
 
+  // 之后重写
   Status StoreCursorStartKey(const DataType& dtype, int64_t cursor, char type, const std::string& next_key);
 
   std::unique_ptr<Redis>& GetDBInstance(const Slice& key);
@@ -1063,10 +1060,10 @@ class Storage {
   Status RunBGTask();
   Status AddBGTask(const BGTask& bg_task);
 
-  Status Compact(const DataType& type, bool sync = false);
-  Status CompactRange(const DataType& type, const std::string& start, const std::string& end, bool sync = false);
-  Status DoCompactRange(const DataType& type, const std::string& start, const std::string& end);
-  Status DoCompactSpecificKey(const DataType& type, const std::string& key);
+  Status Compact(bool sync = false);
+  Status CompactRange(const std::string& start, const std::string& end, bool sync = false);
+  Status DoCompactRange(const std::string& start, const std::string& end);
+  Status DoCompactSpecificKey(const std::string& key);
 
   Status SetMaxCacheStatisticKeys(uint32_t max_cache_statistic_keys);
   Status SetSmallCompactionThreshold(uint32_t small_compaction_threshold);
@@ -1098,7 +1095,7 @@ class Storage {
   pstd::CondVar bg_tasks_cond_var_;
   std::queue<BGTask> bg_tasks_queue_;
 
-  std::atomic<int> current_task_type_ = kNone;
+  std::atomic<int> current_task_type_ = Operation::kNone;
   std::atomic<bool> bg_tasks_should_exit_ = false;
 
   // For scan keys in data base

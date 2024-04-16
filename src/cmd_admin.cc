@@ -78,4 +78,41 @@ void SelectCmd::DoCmd(PClient* client) {
   client->SetRes(CmdRes::kOK);
 }
 
+CompactCmd::CompactCmd(const std::string& name, int16_t arity) : BaseCmd(name, arity, kCmdFlagsAdmin | kCmdFlagsReadonly, kAclCategoryAdmin){}
+
+bool CompactCmd::DoInitial(PClient* client) { return true; }
+
+void CompactCmd::DoCmd(PClient* client) {
+  storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->Compact();
+  if (!s.ok()) {
+    client->SetRes(CmdRes::kErrOther);
+    return;
+  }
+  client->SetRes(CmdRes::kOK);
+}
+
+CompactRangeCmd::CompactRangeCmd(const std::string& name, int16_t arity) : BaseCmd(name, arity, kCmdFlagsAdmin | kCmdFlagsReadonly, kAclCategoryAdmin) {}
+
+bool CompactRangeCmd::DoInitial(PClient* client) { return true; }
+
+void CompactRangeCmd::DoCmd(PClient* client) {
+  if (client->argv_.size() > 3) {
+    client->SetRes(CmdRes::kInvalidParameter);
+    return;
+  }
+  if (client->argv_.size() == 2) {
+    storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->DoCompactSpecificKey(client->argv_[1]);
+    if (!s.ok()) {
+      client->SetRes(CmdRes::kErrOther);
+      return;
+    }
+  } else if (client->argv_.size() == 3) {
+    storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->CompactRange(client->argv_[1], client->argv_[2]);
+    if (!s.ok()) {
+      client->SetRes(CmdRes::kErrOther);
+      return;
+    }
+  }
+  client->SetRes(CmdRes::kOK);
+}
 }  // namespace pikiwidb
