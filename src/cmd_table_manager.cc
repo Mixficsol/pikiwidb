@@ -42,6 +42,8 @@ void CmdTableManager::InitCmdTable() {
   ADD_COMMAND(Flushdb, 1);
   ADD_COMMAND(Flushall, 1);
   ADD_COMMAND(Select, 2);
+  ADD_COMMAND(Compact, 1);
+  ADD_COMMAND(CompactRange, -2);
 
   // keyspace
   ADD_COMMAND(Del, -2);
