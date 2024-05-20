@@ -13,10 +13,10 @@
 #include <unordered_set>
 
 #include "common.h"
+#include "net/tcp_connection.h"
 #include "proto_parser.h"
 #include "replication.h"
 #include "storage/storage.h"
-#include "tcp_connection.h"
 
 namespace pikiwidb {
 
@@ -49,6 +49,7 @@ class CmdRes {
     KIncrByOverFlow,
     kInvalidCursor,
     kmultikey,
+    kWrongLeader,
   };
 
   CmdRes() = default;
@@ -206,6 +207,7 @@ class PClient : public std::enable_shared_from_this<PClient>, public CmdRes {
   void SetAuth() { auth_ = true; }
   bool GetAuth() const { return auth_; }
   void RewriteCmd(std::vector<std::string>& params) { parser_.SetParams(params); }
+  void Reexecutecommand() { this->executeCommand(); }
 
   inline size_t ParamsSize() const { return params_.size(); }
 
@@ -225,6 +227,8 @@ class PClient : public std::enable_shared_from_this<PClient>, public CmdRes {
   void reset();
   bool isPeerMaster() const;
   int uniqueID() const;
+
+  bool isClusterCmdTarget() const;
 
   // TcpConnection's life is undetermined, so use weak ptr for safety.
   std::weak_ptr<TcpConnection> tcp_connection_;

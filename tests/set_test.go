@@ -391,27 +391,24 @@ var _ = Describe("Set", Ordered, func() {
 		Expect(sAdd.Val()).To(Equal(int64(2)))
 
 		// func (c Client) SScan(ctx context.Context, key string, cursor uint64, match string, count int64) *ScanCmd
-		sScan:=client.SScan(ctx,"setSScan1",0,"*",5)
+		sScan := client.SScan(ctx, "setSScan1", 0, "*", 5)
 		Expect(sScan.Err()).NotTo(HaveOccurred())
-		Expect(sScan.Val()).To(ConsistOf([]string{"user1", "user2","user3","Hello","World"}))
-		
-		sScan=client.SScan(ctx,"setSScan1",0,"user*",5)
-		Expect(sScan.Err()).NotTo(HaveOccurred())
-		Expect(sScan.Val()).To(ConsistOf([]string{"user1", "user2","user3"}))
+		Expect(sScan.Val()).To(ConsistOf([]string{"user1", "user2", "user3", "Hello", "World"}))
 
-		sScan=client.SScan(ctx,"setSScan1",0,"He*",5)
+		sScan = client.SScan(ctx, "setSScan1", 0, "user*", 5)
+		Expect(sScan.Err()).NotTo(HaveOccurred())
+		Expect(sScan.Val()).To(ConsistOf([]string{"user1", "user2", "user3"}))
+
+		sScan = client.SScan(ctx, "setSScan1", 0, "He*", 5)
 		Expect(sScan.Err()).NotTo(HaveOccurred())
 		Expect(sScan.Val()).To(ConsistOf([]string{"Hello"}))
-		
+
 		// sScan=client.SScan(ctx,"setSScan1",0,"*",-1)
 		// Expect(sScan.Err()).To(HaveOccurred())
-		
 
 		//del
 		del := client.Del(ctx, "setSScan1")
 		Expect(del.Err()).NotTo(HaveOccurred())
 	})
-
-
 
 })

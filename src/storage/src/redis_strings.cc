@@ -3,13 +3,13 @@
 //  LICENSE file in the root directory of this source tree. An additional grant
 //  of patent rights can be found in the PATENTS file in the same directory.
 
-#include <iostream>
 #include <memory>
 
 #include <fmt/core.h>
 
 #include "pstd/log.h"
 #include "src/base_key_format.h"
+#include "src/batch.h"
 #include "src/redis.h"
 #include "src/scope_record_lock.h"
 #include "src/scope_snapshot.h"
@@ -608,13 +608,13 @@ Status Redis::MSet(const std::vector<KeyValue>& kvs) {
   }
 
   MultiScopeRecordLock ml(lock_mgr_, keys);
-  rocksdb::WriteBatch batch;
+  auto batch = Batch::CreateBatch(this);
   for (const auto& kv : kvs) {
     BaseKey base_key(kv.key);
     StringsValue strings_value(kv.value);
-    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
+    batch->Put(kMetaCF, base_key.Encode(), strings_value.Encode());
   }
-  return db_->Write(default_write_options_, &batch);
+  return batch->Commit();
 }
 
 Status Redis::MSetnx(const std::vector<KeyValue>& kvs, int32_t* ret) {
@@ -643,99 +643,12 @@ Status Redis::MSetnx(const std::vector<KeyValue>& kvs, int32_t* ret) {
 }
 
 Status Redis::Set(const Slice& key, const Slice& value) {
-  rocksdb::WriteBatch batch;
   StringsValue strings_value(value);
+  auto batch = Batch::CreateBatch(this);
   ScopeRecordLock l(lock_mgr_, key);
   BaseKey base_key(key);
-  batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
-  return db_->Write(default_write_options_, &batch);
-}
-
-rocksdb::Status Redis::Exists(const Slice& key) {
-  std::string meta_value;
-  uint64_t llen = 0;
-  std::string value;
-  int32_t ret = 0;
-  BaseMetaKey base_meta_key(key);
-  rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
-  if (s.ok()) {
-    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
-    if (type == Type::kSet) {
-      return SCard(key, &ret);
-    } else if (type == Type::kZset) {
-      return ZCard(key, &ret);
-    } else if (type == Type::kHash) {
-      return HLen(key, &ret);
-    } else if (type == Type::kList) {
-      return LLen(key, &llen);
-    } else {
-      return Get(key, &value);
-    }
-  }
-  return rocksdb::Status::NotFound();
-}
-
-rocksdb::Status Redis::Del(const Slice& key) {
-  std::string meta_value;
-  BaseMetaKey base_meta_key(key);
-  rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
-  if (s.ok()) {
-    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
-    if (type == Type::kSet) {
-      return SetsDel(key);
-    } else if (type == Type::kZset) {
-      return ZsetsDel(key);
-    } else if (type == Type::kHash) {
-      return HashesDel(key);
-    } else if (type == Type::kList) {
-      return ListsDel(key);
-    } else {
-      return StringsDel(key);
-    }
-  }
-  return rocksdb::Status::NotFound();
-}
-
-rocksdb::Status Redis::Expire(const Slice& key, uint64_t ttl) {
-  std::string meta_value;
-  BaseMetaKey base_meta_key(key);
-  rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
-  if (s.ok()) {
-    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
-    if (type == Type::kSet) {
-      return SetsExpire(key, ttl);
-    } else if (type == Type::kZset) {
-      return ZsetsExpire(key, ttl);
-    } else if (type == Type::kHash) {
-      return HashesExpire(key, ttl);
-    } else if (type == Type::kList) {
-      return ListsExpire(key, ttl);
-    } else {
-      return StringsExpire(key, ttl);
-    }
-  }
-  return rocksdb::Status::NotFound();
-}
-
-rocksdb::Status Redis::Expireat(const Slice& key, uint64_t ttl) {
-  std::string meta_value;
-  BaseMetaKey base_meta_key(key);
-  rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
-  if (s.ok()) {
-    auto type = static_cast<Type>(static_cast<uint8_t>(meta_value[0]));
-    if (type == Type::kSet) {
-      return SetsExpireat(key, ttl);
-    } else if (type == Type::kZset) {
-      return ZsetsExpireat(key, ttl);
-    } else if (type == Type::kHash) {
-      return HashesExpireat(key, ttl);
-    } else if (type == Type::kList) {
-      return ListsExpireat(key, ttl);
-    } else {
-      return StringsExpireat(key, ttl);
-    }
-  }
-  return rocksdb::Status::NotFound();
+  batch->Put(kMetaCF, base_key.Encode(), strings_value.Encode());
+  return batch->Commit();
 }
 
 Status Redis::Setxx(const Slice& key, const Slice& value, int32_t* ret, const uint64_t ttl) {
@@ -813,9 +726,9 @@ Status Redis::SetBit(const Slice& key, int64_t offset, int32_t on, int32_t* ret)
     }
     StringsValue strings_value(data_value);
     strings_value.SetEtime(timestamp);
-    rocksdb::WriteBatch batch;
-    batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
-    return db_->Write(default_write_options_, &batch);
+    auto batch = Batch::CreateBatch(this);
+    batch->Put(kMetaCF, base_key.Encode(), strings_value.Encode());
+    return batch->Commit();
   } else {
     return s;
   }
@@ -833,9 +746,9 @@ Status Redis::Setex(const Slice& key, const Slice& value, uint64_t ttl) {
 
   BaseKey base_key(key);
   ScopeRecordLock l(lock_mgr_, key);
-  rocksdb::WriteBatch batch;
-  batch.Put(handles_[kMetaCF], base_key.Encode(), strings_value.Encode());
-  return db_->Write(default_write_options_, &batch);
+  auto batch = Batch::CreateBatch(this);
+  batch->Put(kMetaCF, base_key.Encode(), strings_value.Encode());
+  return batch->Commit();
 }
 
 Status Redis::Setnx(const Slice& key, const Slice& value, int32_t* ret, const uint64_t ttl) {
@@ -1387,6 +1300,126 @@ Status Redis::StringsTTL(const Slice& key, uint64_t* timestamp) {
   return s;
 }
 
+Status Redis::StringsRename(const Slice& key, Redis* new_inst, const Slice& newkey) {
+  std::string value;
+  Status s;
+  const std::vector<std::string> keys = {key.ToString(), newkey.ToString()};
+  MultiScopeRecordLock ml(lock_mgr_, keys);
+
+  BaseKey base_key(key);
+  BaseKey base_newkey(newkey);
+  s = db_->Get(default_read_options_, base_key.Encode(), &value);
+  if (s.ok()) {
+    ParsedStringsValue parsed_strings_value(&value);
+    if (parsed_strings_value.IsStale()) {
+      return Status::NotFound("Stale");
+    }
+    db_->Delete(default_write_options_, base_key.Encode());
+    s = new_inst->GetDB()->Put(default_write_options_, base_newkey.Encode(), value);
+  }
+  return s;
+}
+
+Status Redis::StringsRenamenx(const Slice& key, Redis* new_inst, const Slice& newkey) {
+  std::string value;
+  Status s;
+  const std::vector<std::string> keys = {key.ToString(), newkey.ToString()};
+  MultiScopeRecordLock ml(lock_mgr_, keys);
+
+  BaseKey base_key(key);
+  BaseKey base_newkey(newkey);
+  s = db_->Get(default_read_options_, base_key.Encode(), &value);
+  if (s.ok()) {
+    ParsedStringsValue parsed_strings_value(&value);
+    if (parsed_strings_value.IsStale()) {
+      return Status::NotFound("Stale");
+    }
+    // check if newkey exists.
+    s = new_inst->GetDB()->Get(default_read_options_, base_newkey.Encode(), &value);
+    if (s.ok()) {
+      ParsedStringsValue parsed_strings_value(&value);
+      if (!parsed_strings_value.IsStale()) {
+        return Status::Corruption();  // newkey already exists.
+      }
+    }
+    db_->Delete(default_write_options_, base_key.Encode());
+    s = new_inst->GetDB()->Put(default_write_options_, base_newkey.Encode(), value);
+  }
+  return s;
+}
+
+    rocksdb::Status Redis::Del(const Slice& key) {
+        std::string meta_value;
+        BaseMetaKey base_meta_key(key);
+        rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
+        if (s.ok()) {
+            auto type = static_cast<DataType>(static_cast<uint8_t>(meta_value[0]));
+            switch (type) {
+                case DataType::kSets:
+                    return SetsDel(key);
+                case DataType::kZSets:
+                    return ZsetsDel(key);
+                case DataType::kHashes:
+                    return HashesDel(key);
+                case DataType::kLists:
+                    return ListsDel(key);
+                case DataType::kStrings:
+                    return StringsDel(key);
+                default:
+                    return rocksdb::Status::NotFound();
+            }
+        }
+        return rocksdb::Status::NotFound();
+    }
+    rocksdb::Status Redis::Expire(const Slice& key, uint64_t ttl) {
+        std::string meta_value;
+        BaseMetaKey base_meta_key(key);
+        rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
+        if (s.ok()) {
+            auto type = static_cast<DataType>(static_cast<uint8_t>(meta_value[0]));
+            switch (type) {
+                case DataType::kSets:
+                    return SetsExpire(key, ttl);
+                case DataType::kZSets:
+                    return ZsetsExpire(key, ttl);
+                case DataType::kHashes:
+                    return HashesExpire(key, ttl);
+                case DataType::kLists:
+                    return ListsExpire(key, ttl);
+                case DataType::kStrings:
+                    return StringsExpire(key, ttl);
+                default:
+                    return rocksdb::Status::NotFound();
+            }
+        }
+        return rocksdb::Status::NotFound();
+    }
+    rocksdb::Status Redis::Exists(const Slice& key) {
+        std::string meta_value;
+        uint64_t llen = 0;
+        std::string value;
+        int32_t ret = 0;
+        BaseMetaKey base_meta_key(key);
+        rocksdb::Status s = db_->Get(default_read_options_, handles_[kMetaCF], base_meta_key.Encode(), &meta_value);
+        if (s.ok()) {
+            auto type = static_cast<DataType>(static_cast<uint8_t>(meta_value[0]));
+            switch (type) {
+                case DataType::kSets:
+                    return SCard(key, &ret);
+                case DataType::kZSets:
+                    return ZCard(key, &ret);
+                case DataType::kHashes:
+                    return HLen(key, &ret);
+                case DataType::kLists:
+                    return LLen(key, &llen);
+                case DataType::kStrings:
+                    return Get(key, &value);
+                default:
+                    return rocksdb::Status::NotFound();
+            }
+        }
+        return rocksdb::Status::NotFound();
+    }
 void Redis::ScanStrings() {
   rocksdb::ReadOptions iterator_options;
   const rocksdb::Snapshot* snapshot;

@@ -7,11 +7,14 @@
 
 #include "rocksdb/env.h"
 
-#include "config.h"
 #include "src/base_filter.h"
 #include "src/lists_filter.h"
 #include "src/redis.h"
 #include "src/zsets_filter.h"
+
+#define ADD_TABLE_PROPERTY_COLLECTOR_FACTORY(type)              \
+  type##_cf_ops.table_properties_collector_factories.push_back( \
+      std::make_shared<LogIndexTablePropertiesCollectorFactory>(log_index_collector_));
 
 namespace storage {
 const rocksdb::Comparator* ListsDataKeyComparator() {
@@ -47,18 +50,25 @@ Redis::~Redis() {
   for (auto handle : tmp_handles) {
     delete handle;
   }
+  // delete env_;
   delete db_;
+
+  if (default_compact_range_options_.canceled) {
+    delete default_compact_range_options_.canceled;
+  }
 }
 
 Status Redis::Open(const StorageOptions& storage_options, const std::string& db_path) {
+  append_log_function_ = storage_options.append_log_function;
+  raft_timeout_s_ = storage_options.raft_timeout_s;
   statistics_store_->SetCapacity(storage_options.statistics_max_size);
   small_compaction_threshold_ = storage_options.small_compaction_threshold;
 
   rocksdb::BlockBasedTableOptions table_ops(storage_options.table_options);
   table_ops.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, true));
 
+  // Set up separate configuration for RocksDB
   rocksdb::DBOptions db_ops(storage_options.options);
-  db_ops.create_missing_column_families = true;
 
   // meta & string column-family options
   rocksdb::ColumnFamilyOptions meta_cf_ops(storage_options.options);
@@ -113,6 +123,20 @@ Status Redis::Open(const StorageOptions& storage_options, const std::string& db_
   zset_data_cf_ops.table_factory.reset(rocksdb::NewBlockBasedTableFactory(zset_data_cf_table_ops));
   zset_score_cf_ops.table_factory.reset(rocksdb::NewBlockBasedTableFactory(zset_score_cf_table_ops));
 
+  if (append_log_function_) {
+    // Add log index table property collector factory to each column family
+    ADD_TABLE_PROPERTY_COLLECTOR_FACTORY(meta);
+    ADD_TABLE_PROPERTY_COLLECTOR_FACTORY(hash_data);
+    ADD_TABLE_PROPERTY_COLLECTOR_FACTORY(list_data);
+    ADD_TABLE_PROPERTY_COLLECTOR_FACTORY(set_data);
+    ADD_TABLE_PROPERTY_COLLECTOR_FACTORY(zset_data);
+    ADD_TABLE_PROPERTY_COLLECTOR_FACTORY(zset_score);
+
+    // Add a listener on flush to purge log index collector
+    db_ops.listeners.push_back(std::make_shared<LogIndexAndSequenceCollectorPurger>(
+        &handles_, &log_index_collector_, &log_index_of_all_cfs_, storage_options.do_snapshot_function));
+  }
+
   std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
   // meta & string cf
   column_families.emplace_back(rocksdb::kDefaultColumnFamilyName, meta_cf_ops);
@@ -125,7 +149,13 @@ Status Redis::Open(const StorageOptions& storage_options, const std::string& db_
   // zset CF
   column_families.emplace_back("zset_data_cf", zset_data_cf_ops);
   column_families.emplace_back("zset_score_cf", zset_score_cf_ops);
-  return rocksdb::DB::Open(db_ops, db_path, column_families, &handles_, &db_);
+
+  auto s = rocksdb::DB::Open(db_ops, db_path, column_families, &handles_, &db_);
+  if (!s.ok()) {
+    return s;
+  }
+  assert(!handles_.empty());
+  return log_index_of_all_cfs_.Init(this);
 }
 
 Status Redis::GetScanStartPoint(const DataType& type, const Slice& key, const Slice& pattern, int64_t cursor,
