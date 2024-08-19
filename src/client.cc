@@ -555,7 +555,6 @@ bool PClient::Exec() {
   }
 
   if (IsFlagOn(kClientFlagDirty)) {
-    message_.clear();
     message_ = "$-1\r\n";
     return true;
   }

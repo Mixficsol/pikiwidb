@@ -294,7 +294,6 @@ class PClient : public std::enable_shared_from_this<PClient>, public CmdRes {
   time_t last_auth_ = 0;
 
   ClientState state_;
-  UnboundedBuffer reply_;
   uint64_t net_id_ = 0;
   int8_t net_thread_index_ = 0;
   net::SocketAddr addr_;
