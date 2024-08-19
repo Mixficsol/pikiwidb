@@ -10,7 +10,7 @@
 #include "pikiwidb.h"
 
 namespace pikiwidb {
-
+pikiwidb::CmdTableManager pikiwidb::cmd_table_manager_;
 void CmdWorkThreadPoolWorker::Work() {
   while (running_) {
     LoadWork();
@@ -34,6 +34,7 @@ void CmdWorkThreadPoolWorker::Work() {
 
       if (!cmdPtr->CheckArg(task->Client()->ParamsSize())) {
         task->Client()->SetRes(CmdRes::kWrongNum, task->CmdName());
+        task->Client()->FlagExecWrong();
         g_pikiwidb->PushWriteTask(task->Client());
         continue;
       }

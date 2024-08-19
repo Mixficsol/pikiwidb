@@ -99,6 +99,7 @@ void SetCmd::DoCmd(PClient* client) {
       break;
   }
 
+  std::cout << "B" << std::endl;
   if (s.ok() || s.IsNotFound()) {
     if (res == 1) {
       client->SetRes(CmdRes::kOK);
